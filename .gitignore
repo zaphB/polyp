@@ -1,0 +1,12 @@
+dist
+build
+MANIFEST
+__pycache__
+*.pyc
+*.plb
+*.gds
+.nfs*
+*.ipynb
+.ipynb_checkpoints
+*.egg-info
+*.pdf
