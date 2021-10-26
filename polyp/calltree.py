@@ -290,7 +290,7 @@ class CallTree:
         requireResolvedNamesOnly()
         letters = "abcdefghijklmnopqrstuvwxyz"
         if len(dargs) > 0 or len(largs) != 1 or largs[0] > len(letters):
-          raise ValueError("Invalid arguments to 'int' call.")
+          raise ValueError("Invalid arguments to 'char' call.")
         self._literals = [['string', letters[int(largs[0])]]]
 
       #=====================================================================

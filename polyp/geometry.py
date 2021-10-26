@@ -48,7 +48,7 @@ class Shape:
 
         if self._anchorType != None:
           if dx != None or dy != None:
-            raise ValueError("No anchor definition allows in [dx,dy] style translation.")
+            raise ValueError("No anchor definition allowed in [dx,dy] style translation.")
           dx, dy = anchor
 
         bb = self.boundingBox()._getPointList()
@@ -70,7 +70,6 @@ class Shape:
           self._shape.translate(-min(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
         elif self._anchorType == 'c':
           self._shape.translate(-0.5*(bb[0][0]+bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
-
       self._shape.translate(dx, dy)
     return self
 
