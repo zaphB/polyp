@@ -1,6 +1,6 @@
-# Human-Readble Ascii to gdsII Converter
+# Human-Readble-Ascii to gdsII Converter
 
-Polyp is a renderer that creates gdsII files from an all-ascii human-readble layout language. Geometric shapes are defined by primitive shapes, e.g., squares, circles or text, that are translated, rotated, scaled or otherwise transformed and can be added, subtracted or intersected with each other.
+Polyp is a renderer that creates gdsII layout files from an all-ascii human-readble layout language. Geometric shapes are constructed from primitive shapes, e.g., squares, circles or text, that are translated, rotated, scaled or otherwise transformed and can be added, subtracted or intersected with each other.
 
 Polyp is definitely interesting for you if you
 * are not afraid of using the command line

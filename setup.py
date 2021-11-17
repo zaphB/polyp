@@ -14,7 +14,7 @@ setup(name='polyp',
       long_description=description,
       long_description_content_type='text/markdown',
       author='zaphB',
-      version='1.0.2',
+      version='1.0.3',
       packages=['polyp'],
       entry_points={
         'console_scripts': [
