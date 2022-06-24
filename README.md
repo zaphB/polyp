@@ -11,7 +11,7 @@ Polyp is probably not for you if you
 * prefer manually drawing geometry
 * fell uncomfortable using the command line
 
-A minimal example looks like the following:
+A minimal example is shown in the following:
 
 ```
 SYMBOL main
@@ -19,7 +19,7 @@ SYMBOL main
     rect(10).rotate(45) - text("hello world", dy=3)
 ```
 
-If this is saved in a text file `minimal.pls`, it can be compile with the command
+If this is saved in a text file `minimal.pls` it can be compile with the command
 
 ```
 polyp minimal.pls
@@ -36,19 +36,23 @@ Install polyp and its dependencies with
 pip install polyp
 ```
 
-Executing `polyp -h` on the shell should now show the polyp quick help.
+Executing `polyp -h` on the shell should now show the polyp quick help, `polyp --ersion` should show the expected version number.
 
 
-# Usage
+# Basic usage
 
 To compile a .pls polyp layout script to a .gds file, run `polyp filename`, where `filename` has to be replaced with the path of the .pls file.
 
-*Useful options:* Passing the `-v` option (`polyp -v filename`) compiles the layout script and opens a simple viewer afterwards. The `-w` option keeps checkign the .pls file for updates, recompiles it in case a change in the file is detected and keeps the compiled result open in a viewer. If the `-p` option is passed to polyp, the layout script is compiled to .pdf instead of .gds.
+Passing the `-v` option (`polyp -v filename`) compiles the layout script and opens a simple viewer afterwards.
+
+Passing the `-w` option keeps checkign the .pls file for updates, recompiles it in case a change in the file is detected and keeps the compiled result open in a viewer.
+
+If the `-p` option is passed to polyp, the layout script is compiled to .pdf instead of .gds. One pdf file is created for each gdsII symbol.
 
 
 # Examples
 
-This list of examples starts from a minimal .pls example and moves to more and more complex layout scripts step-by-step. A formal documentation of the polyp layout language is currently not available, feel free to contact me or open an issue in case this is needed.
+This list of examples starts from a minimal .pls example and moves to more and more complex layout scripts step by step. A formal documentation of the polyp layout language is currently not available, feel free to contact me or open an issue in case this is needed.
 
 
 ## Minimal example
@@ -61,9 +65,9 @@ SYMBOL main
     rect(10)
 ```
 
-The capitalized `SYMBOL` and `LAYER` context keywords have to be placed in the beginning of a line and mark the beginning of a symbol or layer context. Except that context keywords have to be placed in the beginning of a new line, all white space characters are equivalent in layout scripts. Hence, the indentation used in these examples is not required for the scripts to compile successfully, but improves readability.
+The capitalized `SYMBOL` and `LAYER` context keywords have to be placed in the beginning of a line and mark the beginning of a symbol or layer context. Note that the indentation used in these examples is not required for the scripts to compile successfully, but improves readability.
 
-The last line `rect(10)` of this example creates a geometric shape, namely a 10x10 square. Since this line is placed inside the `SYMBOL` and `LAYER` contexts, it will be placed in the symbol named `main` and layer `0` in the resulting .gds file. Create a text file with the above content, name it `test.pls`, compile it with `polyp -v text.pls`, and see for yourself!
+The last line `rect(10)` of this example creates a geometric shape, namely a 10x10 square. Since the `rect` is placed inside the `SYMBOL` and `LAYER` contexts, it will be placed in the gdsII symbol named `main` and in layer `0` in the resulting .gds file. Create a text file with the above content, name it `test.pls`, compile it with `polyp -v text.pls`, and see for yourself!
 
 
 ## Using different layers and symbol names
@@ -82,9 +86,10 @@ SYMBOL sub
     rect(5, 10)
 ```
 
-The line `rect(10)` creates a 10x10 square in symbol main, layer 1. The `polygon(...)` built-in creates a polygon using the passed list of coordinates. Coordinates are specified as a comma separated pair of numbers enclosed in square brackets `[...]` in polyp layout scripts. The `polygon(...)` line is placed after `LAYER 2`, hence the resulting polygon is placed in layer 2 of the gds file.
+The line `rect(10)` again creates a 10x10 square in symbol main, layer 1. The `polygon(...)` built-in creates a polygon using the passed list of coordinates. Coordinates are specified as a comma separated pair of numbers enclosed in square brackets `[...]` in polyp layout scripts. The `polygon(...)` line is placed after `LAYER 2`, hence the resulting polygon is placed in layer 2 of the gds file.
 
 The line `SYMBOL sub` then switches the active symbol from `main` to `sub`, hence all following geometry is placed in the symbol `sub`. In this case, the last line `rect(5, 10)` creates a rectangle of 5 units width and 10 units height.
+
 
 ## Creating text
 
@@ -95,7 +100,7 @@ The text is placed with the shape's center of mass placed at [0,0] by default. O
 
 ## Other ways to call `rect(...)`
 
-We already saw that calling rect with a single numeric parameters creates a square with that side length. It is also possible to pass two numeric parameters, e.g. `rect(5, 10)`, to create a rectangle with the given width and height. In addition, an anchor position can be specified by passing a named argument `n`, `e`, `s`, `w`, `ne`, `se`, `sw`, or `nw`, fully analogous to `text(...)`.
+We already saw that calling rect with a single parameter creates a square with the respective side length. It is also possible to pass two numeric parameters, e.g. `rect(5, 10)`, to create a rectangle with the given width and height. In addition, an anchor position can be specified by passing a named argument `n`, `e`, `s`, `w`, `ne`, `se`, `sw`, or `nw`, analogous to `text(...)`.
 
 
 ## Geometric sum, difference and intersect operations
@@ -154,7 +159,7 @@ SYMBOL main
 
 *Mirror at a given point:* Passing a single coordinate to the mirror method performs a point-reflection of the shape at the given coordinate.
 
-*Mirror at the x or y-axis:* Passing a named parameter x or y, e.g., `x=-5`, `y=10`, mirrors the implied line.
+*Mirror at the x or y-axis:* Passing a named parameter x or y, e.g., `x=-5`, `y=10`, mirrors with respect to the implied line.
 
 *Mirror at a freely defined line:* Passing two coordinates to mirror causes the shape to be mirrored at the line that connects these to points.
 
@@ -218,11 +223,11 @@ SYMBOL main
     diamond() - text('A', dy=5)
 ```
 
-Like the `SYMBOL` and `LAYER` keywords, `SHAPE` must be placed at the beginning of a line. `SHAPE` is followed by the desired symbol name and a pair of round brackets. The following lines specify the desired geometry. In this example, the shape name is `diamond` and the geometry is given by a square rotated by 45 degrees. Later, in the layers of the symbol `main`, this shape is created using the statement `diamond()`. As shown, all available methods to manipulate geometry can also be applied to `diamond()`.
+Like the `SYMBOL` and `LAYER` keywords, `SHAPE` must be upper case and placed at the beginning of a line. `SHAPE` is followed by the desired symbol name and a pair of round brackets. The following lines specify the desired geometry. In this example, the shape name is `diamond` and the geometry is given by a square rotated by 45 degrees. Later, in the layers of the symbol `main`, this shape is created using the statement `diamond()`. As shown, all available methods to manipulate geometry can also be applied to `diamond()`.
 
 **Important:** it is not possible to use gdsII references for `SHAPE`s in polyp. `SHAPE`s are always copied as often as they are used in the geometry. It is also not possible to use multiple layers in a `SHAPE`. If you want reference the same piece of geometry multiple times in your script to save memory, or if you want to define multi layered geometries, you are looking for the gdsII symbol and symbol references, which are described later in this tutorial.
 
-It is often desirable to define abstract shapes that use free parameters. In polyp, this can be done by specifying an argument list in the brackets of the `SHAPE` definition:
+It is often desirable to define shapes that use free parameters. In polyp, this can be done by specifying an argument list in the brackets of the `SHAPE` definition:
 
 ```
 SHAPE label(string, height)
@@ -234,14 +239,14 @@ SYMBOL main
     label("such a nice label", 10)
 ```
 
-In this example, the parametric shape `label` expects two parameters. The resulting geometry consists of a rectangle with width `width(text(string, dy=height))+3` and height `height+3`. Another text instance is then subtracted from this rectangle.
+In this example, the parametric shape `label` expects two parameters. The resulting geometry consists of a rectangle with the width calculated from the width of a text instance: `width(text(string, dy=height))+3`. Another text instance is then subtracted from this rectangle.
 
 To create this parametric shape, it is required to pass the parameters to the `label(...)` call, as shown in symbol main. With this definition labels can then be conveniently created and in case the label structure should be changed later, it is possible to do so by only editing a few lines of the script.
 
 
 ## Defining symbol references
 
-Symbols and symbol references are an important feature of the gdsII standard. Multiple symbols can be created by placing multiple symbol sections to the pls script. References are created using the `ref(...)` function:
+Symbols and symbol references are an important feature of the gdsII standard.  Symbols are created by placing symbol sections to the pls script. References are created using the `ref(...)` function:
 
 ```
 SYMBOL sym1
@@ -287,3 +292,117 @@ Here, a parametric symbol with the name `sym{}{:.0f}` with two parameters `a` an
 This parametric symbol is referenced with three different choices of `a` and `b` in the symbol `main`. The parameters are passed to the `ref()` function in addition to the symbol name.
 
 Because the gdsII file format does not support parametric symbols, polyp will create as many gdsII symbols, as parameter choices exist in the layout script. To do so, polyp needs to be capable of creating a unique symbol name from a given parameter set. Therefore, the names of parametric symbols should contain as many `{}` placeholders as parameters exist. A placeholder is given by a pair of curly braces `{}`, optionally containing formatting options. In this example, the symbol name `sym{}{:.0f}` contains the placeholder `{}` for the parameters `a` and the placeholder `{:.0f}` for the parameter `b`. See the documentation of [python's format language](https://www.python.org/dev/peps/pep-3101/) for more details on placeholder structure.
+
+
+## Imports
+
+Any pls script can also serve as a library that can be references from other pls scripts: The `IMPORT` keyword followed by the path to another pls script allows to import shapes and symbols from the external file. Consider this example for a layout split across two different files lib.pls and main.pls:
+
+lib.pls:
+```
+SHAPE externalShape(a, b)
+  rect(a).rotate(b)
+```
+
+main.pls:
+```
+IMPORT lib.pls
+
+SYMBOL main
+  LAYER 0
+    lib.externalShape(10, 60)
+```
+
+The `IMPORT` in main.pls loads all definitions from lib.pls which then can be referenced by `lub.name(...)`, where name is the name defined in lib.pls. To prevent naming collisions, the symbols from a library can also be made accessible under a custom name using the `AS` keyword:
+```
+IMPORT lib.pls AS sub
+...
+sub.externalShape(...)
+```
+
+
+## Named layers
+
+The `LAYER` context also accepts names, not only numbers:
+
+```
+...
+LAYER named_layer
+  text('foobar', dy=10)
+...
+```
+
+Because gdsII files do not support named layers, polyp will automatically assign a layer number and create a symbol called "legend", in which the layer name to layer number correspondence is written. To force a specific gdsII layer number and give the layer a name at the same time, the simply pass both number and name to the `LAYER` context:
+
+```
+...
+LAYER 10 named_layer
+  text('foobar', dy=10)
+...
+```
+
+## Parameter sweeps
+
+It is often desired to design a geometry with a free parameter and to place copies of this geometry with the free parameter being swept through a given range. Parametric geometry is possible with parametric `SHAPE`s or `SYMBOL`s, as shown before. To sweep paramters, the `.call(...)` method is used:
+
+```
+SHAPE shiftedCross(size, linewidth, xOffset, yOffset)
+  (rect(size, linewidth)
+  + rect(linewidth, size)).translate(xOffset, yOffset)
+
+SYMBOL main
+  LAYER param_sweeps
+    shiftedCross.call(start=(5,.5,36,-10), step=(0,0,6,6), stop=(0,0,55,5))
+```
+
+This example defines a parametric shape `shiftedCross` with four free parameters. The line `shiftedCross.call(...)` then places instances of this shape with the four parameters varied as given by the `start`, `step` and `stop` arguments. The routine starts by choosing all parameters according to the `start`-list, namely `size=5`, `linewidth=.5`, `xOffset=36` and `yOffset=-10`. Each parameter is then incremented as specified by the respective number in the `step`-list until it reaches the value given in the `stop`-list. A `step` value of zero implies that the respective parameter is not swept at all. The parametric shape `shiftedCross` is created for all possible combinations of parameters.
+
+
+## Globals
+
+In larger layouts it is helpful to maintain a central list of global parameters, e.g. linewidths, minimum paddings or spacings etc. This is done using the `GLOBALS` context in polyp layout scripts:
+
+```
+GLOBALS
+  linewidth = 15
+  width = 100
+
+SYMBOL main
+  LAYER 0
+    rect(linewidth, width)
+```
+
+The definitions from the `GLOBALS` section can be used anywhere in the layout script.
+
+
+## Objects und unpacking
+
+Objects can be created to group globally stored parameters:
+
+```
+GLOBALS
+  optsA = {
+    linewidth = 15
+    width = 100
+  }
+  optsB = {
+    linewidth = 15
+    width = 100
+  }
+
+SHAPE wire(linewidth, width)
+  rect(linewidth, width)
+
+
+SYMBOL main
+  LAYER 0
+    wire(*optsA)
+  LAYER 1
+    wire(*optsB)
+```
+
+The unary `*` operator applied to objects unpacks the obect into a parameter list. This way it is not necessary to write down all argument names anymore, which is helpful in layouts with many free parameters.
+
+## QR codes
+
+The `qrcode` native creates a qr code geometry from a given string. The optional named parameters `dx` and `dy` specify the size of the resulting code in x and y directions. With the `robust` parameter (1...4, higher=more robust, default 2) the redundancy in the generated code can be adjusted. The `res` parameter controls the number of "pixels" used in the qrcode. By default, the `res` is automatically chosen according to the input string.
