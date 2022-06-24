@@ -430,11 +430,19 @@ class _ScriptSection:
     self._callTree = calltree.CallTree(root, self._text)
     self._callTree.createLiterals()
 
+    # evaluate once and ignore all errors to simplify trees as far
+    # as possible
     try:
       self._callTree.evaluate()
-    except Exception as e:
-      if head[0] != "SHAPE" and not self._isParametricSymbol:
-        raise e
+    except KeyboardInterrupt:
+      raise
+    except:
+      pass
+
+    # if not in shape or parametric symbol definition, evaluate
+    # a second time, also resolve for globals and raise if error
+    if head[0] != "SHAPE" and not self._isParametricSymbol:
+      self._callTree.evaluate(resolveGlobals=True)
 
     # shape
     if head[0] == "SHAPE":
@@ -443,7 +451,9 @@ class _ScriptSection:
 
     elif head[0] == 'GLOBALS':
       rt, r = self._callTree._result
-      print(r)
+      if rt == 'assignment':
+        r = [[rt, r]]
+        rt = 'argumentlist'
       if rt != 'argumentlist' or any([t!='assignment' for t, _ in r]):
         raise ValueError('GLOBALS sections must only contain assignments')
       root.globals.update({k: v for _, (k, v) in r})

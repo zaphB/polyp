@@ -12,8 +12,9 @@ _PRINT_LIT_REDUCTION = False
 
 class CallTree:
   _operators = [['make'], ['.'], ['^'], ['*', '/'], ['-', '+'],
-                ['pstart', 'pend'], ['unpack'], ['psep'], ['.'],
-                ['='], [','],]
+                ['pstart', 'pend'], ['psep'], ['.'],
+                ['oassign'], ['osep'], ['ostart', 'oend'],
+                ['='], ['unpack'], [',']]
 
   def __init__(self, root, text=""):
     self._root = root
@@ -115,33 +116,49 @@ class CallTree:
       else:
         i += 1
 
+
   def _instanciateShape(self, obj, largs, dargs):
     tree = obj['tree']
     argdict = {k: None for k in obj['args']}
+
     if len(largs) > len(argdict):
-      raise ValueError("Too many list args in parametric shape call: '{}'.".format(self._func))
+      raise ValueError(f'too many list args in parametric shape '
+                       f'call: "{self._func}"')
+
     if len(argdict) > 0:
       for targetKey, listArg in zip(obj['args'], largs):
         argdict[targetKey] = self._py2lit(listArg)
       for key, val in dargs.items():
-        if argdict[key] is None:
+
+        # magic keyword arugument __ignore_extra_args__ is only passed
+        # if unpacking operator was used
+        if (key not in argdict
+              and not '__ignore_extra_args__' in dargs.keys()):
+          raise ValueError(f'passed named argument {key} which does not '
+                           f'exist in shape\'s argument list')
+
+        if key in argdict:
+          if (argdict[key] is not None
+              and not '__ignore_extra_args__' in dargs.keys()):
+            raise ValueError("argument specified by list arg and named arg in parametric shape call: '{}'.".format(self._func))
+
           argdict[key] = self._py2lit(val)
-        else:
-          raise ValueError("Argument specified by list arg and named arg in parametric shape call: '{}'.".format(self._func))
+
       if None in argdict.values():
-        raise ValueError("To few arguements in parametric shape call: '{}'.".format(self._func))
+        raise ValueError("to few arguements in parametric shape call: '{}'.".format(self._func))
     unresolvedNames = tree.resolveNames(argdict)
     if unresolvedNames:
       raise ValueError("Unresolved names "
                       +", ".join(['"'+s+'"' for s in unresolvedNames])
                       +" in imported parameteric shape call: ".format(self._func))
-    tree.evaluate()
+    tree.evaluate(resolveGlobals=True)
     return tree.getShape()
 
-  def evaluate(self):
+
+  def evaluate(self, resolveGlobals=False):
     for child in self._children:
       if type(child) is CallTree:
-        child.evaluate()
+        child.evaluate(resolveGlobals=resolveGlobals)
 
     #=====================================================================
     # accumulate children
@@ -159,7 +176,7 @@ class CallTree:
     if len(self._children) > 1:
       raise ValueError("Fatal error: children without literals not allowed.")
 
-    self.resolveNames({})
+    self.resolveNames({}, resolveGlobals=resolveGlobals)
     self._reduceLiterals()
 
     #=====================================================================
@@ -170,7 +187,9 @@ class CallTree:
 
     else:
       unresolvedNames = []
+      largTypes = []
       largs = []
+      dargTypes = {}
       dargs = {}
 
       # multiple arguments
@@ -180,16 +199,19 @@ class CallTree:
             if lit[1][1][0] == 'name':
               unresolvedNames.append(lit[1][1][1])
             dargs[lit[1][0]] = lit[1][1][1]
+            dargTypes[lit[1][0]] = lit[1][1][0]
           else:
             if lit[0] == 'name':
               unresolvedNames.append(lit[1])
             largs.append(lit[1])
+            largTypes.append(lit[0])
 
       # only one argument
-      elif self._result[0] != "none":
+      elif self._result[0] != 'none':
         if self._result[0] == 'name':
           unresolvedNames.append(self._result[1])
         largs = [self._result[1]]
+        largTypes = [self._result[0]]
         dargs = {}
 
       def requireResolvedNamesOnly():
@@ -393,21 +415,37 @@ class CallTree:
       #=====================================================================
       # create symbol reference:
       elif self._func == 'ref':
-        if len(largs) == 1:
-          self._literals = [['shaperef', _gdspy.CellReference(self._root.gdsLib.cells[largs[0]])]]
-        elif len(largs) > 1:
-          if largs[0] not in self._root.paramSymDict:
-            raise ValueError('Parametric symbol "'+str(largs[0])+'" was not defined. '
-                            +'(Symbols may only be used after their definition)')
-          paramSym = self._root.paramSymDict[largs[0]]
-          symParams = largs[1:]
+        if len(largs) == 1 and len(dargs) == 0:
+          self._literals = [['shaperef',
+                               _gdspy.CellReference(
+                                    self._root.gdsLib.cells[largs[0]])]]
+        elif len(largs) > 0 or len(dargs) > 0:
+          for candidateName, candidate in self._root.paramSymDict.items():
+            _cmp = lambda s: _re.sub(r'[\-_\{\}]+', '', s.lower())
+            if _cmp(candidateName) == _cmp(largs[0]):
+              utils.debug(f'matched {largs[0]} with {candidateName}')
+              paramSym = candidate
+              break
+          else:
+            raise ValueError('tried to create reference to undefined '
+                             'parametric symbol "'+str(largs[0])+'" '
+                             '(symbols may only be used after '
+                             'their definition)')
+
+          listParams = [list(v) for v in zip(largTypes[1:], largs[1:])]
           self._literals = [['paramshaperef', paramSym], ['operator', 'make'],
                             ['argumentlist',
-                               [['name', p] if type(p) is str
-                                  else self._py2lit(p) for p in symParams]]]
+                              listParams
+                              +[['assignment', [k, self._py2lit(v)]]
+                                    for k, v in dargs.items()]]]
+          print(self._literals)
+        else:
+          raise ValueError(f'ref requires one or more list args and zero or '
+                           f'more named args, found {len(largs)} list args '
+                           f'and {len(dargs)} named args')
 
       else:
-        raise ValueError("Invalid function/shape '{}'.".format(self._func))
+        raise ValueError(f'invalid function/shape {self._func}')
 
       if _PRINT_LIT_REDUCTION:
         utils.debug('Evaluation result: ['+', '.join(['['+l[0]+', '
@@ -416,7 +454,7 @@ class CallTree:
 
   def _parseStr(self, childId, inPoint=False):
     #=====================================================================
-    # Split string in literals 'str', 'int', 'float', 'name', 'operator'
+    # split string in literals 'str', 'int', 'float', 'name', 'operator'
     # and 'point'
     appliedChange = False
     s = self._children[childId]
@@ -426,6 +464,7 @@ class CallTree:
       buf = ''
       inNumber = False
       inName = False
+      inObj = False
       s = s + ' '
       for prevC, c, nextC in zip(' ' + s[:-1], s, s[1:] + ' '):
         while True:
@@ -474,12 +513,31 @@ class CallTree:
               literals.append(['operator', 'pend'])
               inPoint = False
 
+            elif inObj and c == '{':
+              raise ValueError('objects cannot be nested')
+
+            elif c == '{':
+              literals.append(['operator', 'ostart'])
+              inObj = True
+
+            elif inObj and c == ',':
+              literals.append(['operator', 'osep'])
+
+            elif inObj and c == '=':
+              literals.append(['operator', 'oassign'])
+
+            elif c == '}':
+              literals.append(['operator', 'oend'])
+              inObj = False
+
             elif _re.match('[0-9]', c) or c == '.' and _re.match('[0-9]', nextC):
               reparseChar = True
               inNumber = True
               buf = ''
 
             elif c in [op for ops in self._operators for op in ops]:
+              if c == '=' and literals[-1][0] == 'name':
+                literals[-1][0] = 'assignname'
               literals.append(['operator', c])
 
             elif _re.match('[a-zA-Z_]', c):
@@ -688,6 +746,38 @@ class CallTree:
             literals[i] = ["point-y", op[1]]
 
           #=====================================================================
+          # object start, sep and end operators
+          elif (l[1] == 'oassign'
+                  and isPrevLitType(['name'])):
+            op1 = popPrevLit()
+            op2 = popNextLit()
+            literals[i] = ['obj', {op1[1]: op2}]
+
+          elif (l[1] == 'osep'
+                  and isPrevLitType(['obj'])
+                  and isNextLitType(['obj'])):
+            op1 = popPrevLit()
+            if op1[0] == 'obj':
+              o1 = op1[1]
+            else:
+              o1 = {op1[1][0]: op1[1][1]}
+            op2 = popNextLit()
+            if op2[0] == 'obj':
+              o2 = op2[1]
+            else:
+              o2 = {op2[1][0]: op2[1][1]}
+            o1.update(o2)
+            literals[i] = ['obj', o1]
+
+          elif l[1] == 'ostart' and isNextLitType(['obj']):
+            op = popNextLit()
+            literals[i] = ['obj', op[1]]
+
+          elif l[1] == 'oend' and isPrevLitType(['obj']):
+            op = popPrevLit()
+            literals[i] = ["obj", op[1]]
+
+          #=====================================================================
           # dot operator for imported shapes
           elif(l[1] == '.' and isNextLitType('import')
                            and isPrevLitType('name')):
@@ -695,10 +785,12 @@ class CallTree:
             op2 = popNextLit()
 
             largs, dargs = op2[2]
-            obj = _copy.deepcopy(self._root.importDict[op1[1]].shapeDict[op2[1]])
+            obj = _copy.deepcopy(
+                          self._root.importDict[op1[1]].shapeDict[op2[1]])
 
             shape = self._instanciateShape(obj, largs, dargs)
-            utils.debug('self._literals['+str(i)+'] = ["shape", '+str(shape)+']')
+            utils.debug('self._literals['+str(i)+'] = ["shape", '
+                        ' '+str(shape)+']')
             literals[i] = ['shape', shape]
 
           #=====================================================================
@@ -735,7 +827,7 @@ class CallTree:
 
           #=====================================================================
           # assignment operator
-          elif l[1] == '=' and isPrevLitType('name'):
+          elif l[1] == '=' and isPrevLitType(['name', 'assignname']):
             op1 = popPrevLit()
             op2 = popNextLit()
             literals[i] = ['assignment', [op1[1], op2]]
@@ -745,15 +837,49 @@ class CallTree:
           elif (l[1] == 'make'
                and isPrevLitType('paramshaperef')
                and isNextLitType('argumentlist')):
+
             op1 = popPrevLit()
             op2 = popNextLit()
 
             paramSym = op1[1]
-            symParams = [v[1] for v in op2[1]]
+            pattern = paramSym[0]['name_pattern']
 
-            utils.debug("symbol name pattern:", paramSym[0]['name_pattern'],
-                        "params:", symParams)
-            symInstanceName = paramSym[0]['name_pattern'].format(*symParams)
+            # find out expected arguments
+            for section in paramSym:
+              argNames = section['args']
+              break
+
+            # check if all arguments are given
+            usedParams = []
+            dargs = {v[0]: v[1]
+                          for k, v in op2[1] if k == 'assignment'}
+            argdict = {}
+            for k in argNames:
+              if k in dargs:
+                arg = dargs.pop(k)
+              else:
+                arg = op2[1].pop(0)
+              if arg[0] == 'assignment':
+                raise ValueError('did not pass enough args to '
+                                 'parametric symbol')
+              argdict[k] = arg
+              usedParams.append(arg)
+
+            # resolve names in used arguments
+            _unresolvedNames = self.resolveNames({}, literals=usedParams)
+            if _unresolvedNames:
+              raise ValueError(f'found unresolved names "'
+                               f'{", ".join(_unresolvedNames)}" '
+                               f'in argument list '
+                               f'of parametric symbol {pattern}')
+
+            # create symbol name
+            symInstanceName = pattern.format(*[p[1] for p in usedParams])
+            if pattern == symInstanceName:
+              raise ValueError(f'parametric symbol name {pattern} does not '
+                               'seem to contain {} placeholders, please '
+                               'insert placeholders to guarantee unique '
+                               'symbol names for each parameter choice')
 
             if symInstanceName in self._root.gdsLib.cells.keys():
               sym = self._root.gdsLib.cells[symInstanceName]
@@ -770,10 +896,8 @@ class CallTree:
 
                 layer = section['layer']
                 argNames = section['args']
-
-                argdict = {k: self._py2lit(v) for k, v in zip(argNames, symParams)}
                 unresolvedNames = tree.resolveNames(argdict)
-                tree.evaluate()
+                tree.evaluate(resolveGlobals=True)
                 if tree._result[0] != 'none':
                   shapeResult = False
                   try:
@@ -784,11 +908,13 @@ class CallTree:
                   if shapeResult:
                     if s is None:
                       if unresolvedNames:
-                        raise ValueError("Unresolved name(s) in layer shapes: "
-                                      +", ".join(['"'+n+'"' for n in unresolvedNames]))
+                        raise ValueError('unresolved name(s) in layer shapes: '
+                                              +', '.join(['"'+n+'"'
+                                                  for n in unresolvedNames]))
                       else:
-                        raise ValueError("Unexpected 'None'-shape found after instanciation "
-                                         +"of parametric symbol:\n"+str(tree))
+                        raise ValueError('unexpected None-shape found '
+                                         'after instanciation '
+                                         'of parametric symbol:\n'+str(tree))
 
                     shape = s._shape
                     if not shape is None:
@@ -825,15 +951,15 @@ class CallTree:
 
           #=====================================================================
           # evaluate unpack operator
-          elif l[1] in ['unpack', ] and isNextLitType(['name', ]):
+          elif l[1] == 'unpack' and isNextLitType(['obj']):
             op = popNextLit()
-            if op[0] == 'list':
-              argList = op[1]
-            elif op[0] == 'obj':
-              argList = op[1]
-            else:
-              raise ValueError(f'unexpected type {op[0]}')
-            literals[i] = ['argumentlist', argList]
+            arglist = [['assignment', [k, v]] for k, v in op[1].items()]
+
+            # insert magic argument to silence errors on shape
+            # instatiation
+            arglist.append(['assignment', ['__ignore_extra_args__', ['none', None]]])
+
+            literals[i] = ['argumentlist', arglist]
 
           else:
             if viewPrevLit():
@@ -848,7 +974,8 @@ class CallTree:
             if _PRINT_LIT_REDUCTION:
               utils.debug("parsing paused...")
               utils.debug()
-            raise ValueError("Illegal operands for operator '{}': {} and {}".format(l[1], t1, t2))
+            raise ValueError("Illegal operands for operator '{}': {} "
+                             "and {}".format(l[1], t1, t2))
 
           if _PRINT_LIT_REDUCTION:
             utils.debug("applied operator:", l[1])
@@ -866,24 +993,27 @@ class CallTree:
                   for lit in self._children[0]._literals])
             and not any([lit[0] == 'paramshaperef'
                   for lit in self._children[0]._literals])):
-      raise ValueError("Syntax error.")
+      raise ValueError(f'syntax error: expected expression to evaluate to '
+                   f'one single toplevel object, found: "'
+                   f'{", ".join([l[0] for l in self._children[0]._literals])}"'
+                   f'did you forget to join shapes with +, - or'
+                   f' * operators somewhere?')
 
-    if len(self._children[0]._literals) == 1 and self._children[0]._literals[0][0] != 'shaperef':
+    if (len(self._children[0]._literals) == 1
+            and self._children[0]._literals[0][0] != 'shaperef'):
       self._result = self._children[0]._literals[0]
     else:
       self._result = self._children[0]._literals
 
-  def resolveNames(self, names):
+  def resolveNames(self, names, resolveGlobals=False, literals=None):
     unresolvedNames = []
 
     #-----------------------------------------------------
     # prepare dict with all available names
 
-    # globals
-    names = _copy.deepcopy(self._root.globals)
-
     # magic names:
-    names["__FILENAME__"] = ["string", _re.sub('\..*$', '', _os.path.basename(self._root.path))]
+    names["__FILENAME__"] = ["string", _re.sub('\..*$', '',
+                                       _os.path.basename(self._root.path))]
     names["__HASH__"] = ["string", self._root.hash]
     names["__DATE__"] = ["string", _time.strftime("%d.%m.%Y")]
     names["__TIME__"] = ["string", _time.strftime("%H:%M")]
@@ -892,12 +1022,19 @@ class CallTree:
     names["True"] = ['int', 1]
     names["False"] = ['int', 0]
 
-    #-----------------------------------------------------
-    # do resolve names from dict
+    # add globals if enabled
+    if resolveGlobals:
+      for k in self._root.globals:
+        if k not in names:
+          names[k] = _copy.deepcopy(self._root.globals[k])
 
-    for child in self._children:
-      if type(child) is CallTree:
-        child.resolveNames(names)
+    #-----------------------------------------------------
+    # resolve names from dict
+
+    if literals is None:
+      for child in self._children:
+        if type(child) is CallTree:
+          child.resolveNames(names)
 
     def resolveArglist(lit):
       unresolvedNames = []
@@ -918,8 +1055,12 @@ class CallTree:
     if hasattr(self, '_result'):
       unresolvedNames.extend(resolveArglist(self._result))
 
-    if hasattr(self, '_literals'):
-      for literal in self._literals:
+    if hasattr(self, '_literals') and literals is None:
+      literals = self._literals
+
+    if literals:
+      for literal, nextLiteral in zip(literals,
+                                      literals[1:]+[None]):
         if literal[0] == 'name':
           if literal[1] in names:
             literal[0] = names[literal[1]][0]
@@ -956,11 +1097,13 @@ class CallTree:
     if hasattr(self, "_result"):
       if ref:
         if not all([r[0]=='shaperef' for r in self._result]):
-          raise ValueError('Expected only "shaperef" types but found: '+str(self._result))
+          raise ValueError('expected only "shaperef" types but found: '
+                            +str(self._result))
         return [r[1] for r in self._result]
       else:
         if self._result[0] != 'shape':
-          raise ValueError('Expected "shape" type result but found: '+str(self._result))
+          raise ValueError('expected "shape" type result but found: '
+                            +str(self._result))
         return self._result[1]
     return None
 

@@ -8,7 +8,7 @@ from . import geometry as _geometry
 
 
 def debug(*msg):
-  #print('DEBUG: '+' '.join([str(m) for m in msg]))
+  print('DEBUG: '+' '.join([str(m) for m in msg]))
   pass
 
 
