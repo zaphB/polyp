@@ -1,5 +1,7 @@
 import gdspy as _gdspy
 import numpy as _np
+import qrcode as _qr
+import qrcode.constants as _qrc
 
 from . import fonts
 
@@ -211,7 +213,7 @@ class Text(Shape):
     anchors = ['c', 'n','ne','e','se','s','sw','w','nw']
     for a in args:
       if a not in anchors + ['dx']:
-        raise ValueError("Unexpected argument '{}' in rect call.".format(a))
+        raise ValueError('unexpected argument "{}" in text call.'.format(a))
 
     self._anchorType = None
     anchor = [0,0]
@@ -262,6 +264,84 @@ class Text(Shape):
     else:
       self.translate(-0.5*(bb[0][0]+bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
     self.translate(anchor[0],anchor[1])
+
+
+class Qrcode(Shape):
+  def __init__(self, string, dy, **args):
+    anchors = ['c', 'n','ne','e','se','s','sw','w','nw']
+    for a in args:
+      if a not in anchors + ['dx']:
+        raise ValueError('unexpected argument "{}" in qrcode call.'.format(a))
+
+    self._anchorType = None
+    self.anchor = [0,0]
+    for a in anchors:
+      if a in args:
+        if self._anchorType != None:
+          raise ValueError("Multiple anchors in text definition.")
+        self._anchorType = a
+        self.anchor = args[a]
+
+    self.string = string
+    self.dy = dy
+    self.dx = args.get('dx', dy)
+    self.res = args.get('res', 'auto')
+    self.robustness = args.get('robust', 2)
+    self.makeMatrix()
+    self.makeShape()
+
+  def makeMatrix(self):
+    if self.robustness < 1 or self.robustness > 4:
+      raise ValueError('robustness value must be between 1 and 4')
+    r = _qr.QRCode(version=None if self.res == 'auto'
+                                        else self.res,
+                   error_correction=[_qrc.ERROR_CORRECT_L,
+                                     _qrc.ERROR_CORRECT_M,
+                                     _qrc.ERROR_CORRECT_Q,
+                                     _qrc.ERROR_CORRECT_H]
+                                        [self.robustness-1],
+                   border=0)
+    r.add_data(self.string)
+    r.make(**({'fit': True} if self.res == 'auto' else {}))
+    self.matrix = r.get_matrix()
+
+  def makeShape(self):
+    polys = []
+    h, w = 1/len(self.matrix), 1/len(self.matrix[0])
+    dx, dy = self.dx, self.dy
+    for i, r in enumerate(self.matrix):
+      for j, v in enumerate(r):
+        if v:
+          polys.append([[dx*i*w, dy*j*h], [dx*(i+1)*w, dy*j*h],
+                        [dx*(i+1)*w, dy*(j+1)*h], [dx*i*w, dy*(j+1)*h]])
+
+    self._shape = _gdspy.PolygonSet(polys)
+    bb = self.boundingBox()._getPointList()
+    top = max(bb[0][1],bb[2][1])
+    bot = min(bb[0][1],bb[2][1])
+
+    if self._anchorType in ['ne','se','sw','nw']:
+      if self._anchorType == 'ne':
+        self.translate(-max(bb[0][0], bb[2][0]), -top)
+      elif self._anchorType == 'se':
+        self.translate(-max(bb[0][0], bb[2][0]), -bot)
+      elif self._anchorType == 'sw':
+        self.translate(-min(bb[0][0], bb[2][0]), -bot)
+      elif self._anchorType == 'nw':
+        self.translate(-min(bb[0][0], bb[2][0]), -top)
+    elif self._anchorType in ['n','e','s','w']:
+      if self._anchorType == 'n':
+        self.translate(-0.5*(bb[0][0]+bb[2][0]), -top)
+      elif self._anchorType == 'e':
+        self.translate(-max(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+      elif self._anchorType == 's':
+        self.translate(-0.5*(bb[0][0]+bb[2][0]), -bot)
+      elif self._anchorType == 'w':
+        self.translate(-min(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+    else:
+      self.translate(-0.5*(bb[0][0]+bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+    self.translate(self.anchor[0], self.anchor[1])
+
 
 class Rotator:
   def __init__(self, angle, center=None, unit="deg", copy=False):

@@ -243,6 +243,12 @@ class CallTree:
         self._literals = [['shape', geometry.Text(*largs, **dargs)]]
 
       #=====================================================================
+      # qrcode function
+      elif self._func == "qrcode":
+        requireResolvedNamesOnly()
+        self._literals = [['shape', geometry.Qrcode(*largs, **dargs)]]
+
+      #=====================================================================
       # translate function
       elif self._func == "translate":
         requireResolvedNamesOnly()
