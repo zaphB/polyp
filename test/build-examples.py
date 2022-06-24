@@ -1,6 +1,7 @@
 import unittest
 import subprocess
 import os
+import time
 
 class TestBuildExample(unittest.TestCase):
   def _test_build(self, files, opts=[], clean=True):
@@ -17,12 +18,16 @@ class TestBuildExample(unittest.TestCase):
       self.assertEqual(res.returncode, 0)
 
   def test_gdsBuild(self):
-    files = ('test', 'globals', 'qrcode')
+    files = ('test', 'objects', 'qrcode')
+    t0 = time.time()
     self._test_build(files=files)
+    dt = time.time()-t0
     for f in files:
       self.assertTrue(os.path.exists(f'test/pls/{f}.gds'))
 
-   # zeit messen und mit clean=False vergleichen
+    t0 = time.time()
+    self._test_build(files=files, clean=False)
+    self.assertTrue(time.time()-t0 < .9*dt)
 
 
   def test_pdfBuild(self):
