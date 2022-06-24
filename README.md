@@ -267,7 +267,7 @@ Because referenced symbols already contain layer definitions, it is not necessar
 
 ## Defining and referencing parametric symbols
 
-Using free parameters in the definition of symbols can be quite useful. In Analogy to `SHAPE`s, this can be done by adding an argument list after the symbol name:
+Using free parameters in the definition of symbols can be quite useful. In analogy to `SHAPE`s, this can be done by adding an argument list after the symbol name:
 
 ```
 SYMBOL sym{}{:.0f}(a, b)
@@ -282,8 +282,8 @@ SYMBOL main
   ref(sym,  5, 10)
 ```
 
-Here, a parametric symbol the the name `sym{}{:.0f}` with two parameters `a` and `b` is defined. The symbol contains translated rectangles with sizes specified by the two parameters on layer 1 and layer 2.
+Here, a parametric symbol with the name `sym{}{:.0f}` with two parameters `a` and `b` is defined (why there are curly braces in the name is explained below). The symbol contains translated rectangles with sizes specified by the two parameters on layer 1 and layer 2.
 
-This parametric symbol is references with three different choices of `a` and `b` in the symbol `main`. The parameters are passed to the `ref()` function in addition to the symbol name.
+This parametric symbol is referenced with three different choices of `a` and `b` in the symbol `main`. The parameters are passed to the `ref()` function in addition to the symbol name.
 
-Obviously, the gdsII symbols cannot be parametric, therefore polyp will create as many gdsII symbols, as parameter choices exist in the layout script. To do so, polyp needs to be capable of creating a unique symbol name from a given parameter set. Therefore, the names of parametric symbols should contain as many placeholders as parameters exist. A placeholder is given by a pair of curly braces, optionally containing formatting options. In this example, the symbol name `sym{}{:.0f}` contains the placeholder `{}` for the parameters `a` and the placeholder `{:.0f}` for the parameter `b`. See the documentation of (python's format language)[https://www.python.org/dev/peps/pep-3101/] for more details on placeholder structure.
+Because the gdsII file format does not support parametric symbols, polyp will create as many gdsII symbols, as parameter choices exist in the layout script. To do so, polyp needs to be capable of creating a unique symbol name from a given parameter set. Therefore, the names of parametric symbols should contain as many `{}` placeholders as parameters exist. A placeholder is given by a pair of curly braces `{}`, optionally containing formatting options. In this example, the symbol name `sym{}{:.0f}` contains the placeholder `{}` for the parameters `a` and the placeholder `{:.0f}` for the parameter `b`. See the documentation of [python's format language](https://www.python.org/dev/peps/pep-3101/) for more details on placeholder structure.

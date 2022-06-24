@@ -81,6 +81,7 @@ class PlsScript:
       if self.path:
         utils.debug('rendering '+_os.path.basename(self.path))
       self.sections = []
+      self.globals = {}
       self.shapeDict = {}
       self.paramSymDict = {}
       self.importDict = {}
@@ -102,11 +103,13 @@ class PlsScript:
                                                       .encode()).digest())]
                         ) % 1e5)).rjust(5,'0')
 
-        m = _re.compile("(SHAPE|SYMBOL|LAYER|IMPORT).*\n").search(text, pos)
+        m = (_re.compile("(SHAPE|SYMBOL|LAYER|IMPORT|GLOBALS).*\n")
+                        .search(text, pos))
         if not m:
           break
         if lastHead != "":
-          newSection = _ScriptSection(self, lastHead, text[pos:m.start()], lastSection, forceRerender)
+          newSection = _ScriptSection(self, lastHead, text[pos:m.start()],
+                                      lastSection, forceRerender)
           self.sections.append(newSection)
           lastSection = newSection
 
@@ -114,7 +117,8 @@ class PlsScript:
         pos = m.end()
 
       if lastHead != "":
-        self.sections.append(_ScriptSection(self, lastHead, text[pos:], lastSection, forceRerender))
+        self.sections.append(_ScriptSection(self, lastHead, text[pos:],
+                                            lastSection, forceRerender))
 
       # add legend in case of named layers
       if any([name != None for name in self.layerDict.values()]):
@@ -388,6 +392,10 @@ class _ScriptSection:
         raise ValueError("Layer number {} exceeds 0...255 range.".format(layerNum))
       self._layer = layerNum
 
+    elif head[0] == "GLOBALS":
+      if len(head) > 1:
+        raise ValueError("Invalid GLOBALS statement: '"+self._head+"'")
+
     else:
       raise ValueError("Invalid keyword.")
 
@@ -412,6 +420,12 @@ class _ScriptSection:
       prev = prev._prev
 
     #=====================================================================
+    # insert parentheses and commas if GLOBALS section
+    if head[0] == 'GLOBALS':
+      self._text = '('+','.join([s.strip(',')
+                                for s in self._text.split('\n')
+                                      if s.strip()])+')'
+
     # parse section text into calltree
     self._callTree = calltree.CallTree(root, self._text)
     self._callTree.createLiterals()
@@ -426,6 +440,13 @@ class _ScriptSection:
     if head[0] == "SHAPE":
       root.shapeDict[self._shapeName] = {"args": self._args,
                                          "tree": self._callTree}
+
+    elif head[0] == 'GLOBALS':
+      rt, r = self._callTree._result
+      print(r)
+      if rt != 'argumentlist' or any([t!='assignment' for t, _ in r]):
+        raise ValueError('GLOBALS sections must only contain assignments')
+      root.globals.update({k: v for _, (k, v) in r})
 
     # parametric symbol
     elif self._isParametricSymbol:
@@ -453,8 +474,9 @@ class _ScriptSection:
       for ref in self._callTree._result:
         sym.add(ref[1])
 
-    # if shape instance
-    elif len(self._callTree._result) == 2 and self._callTree._result[0] == 'shape':
+    # if call tree collapsed to one shape
+    elif (len(self._callTree._result) == 2
+            and self._callTree._result[0] == 'shape'):
       if not self._symbol or type(self._layer) is not int:
         raise ValueError('Shapes found without symbol or layer context')
       if self._symbol in root.gdsLib.cells:
@@ -478,5 +500,5 @@ class _ScriptSection:
 
   def __str__(self):
     return ("<_ScriptSection object; head='{}', text='{}'>".format(utils.shortenText(self._head),
-                                                                   utils.shortenText(self._text))
+                               utils.shortenText(self._text))
             +"\n"+str(self._callTree))

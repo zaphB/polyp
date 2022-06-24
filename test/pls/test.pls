@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------
 # pls import allows using shapes and symbols from external files.
 # The AS keyword selects a namespace to prevent naming collisions,
-# the default namespace is the scriptname without extension. 
+# the default namespace is the scriptname without extension.
 #
 IMPORT lib.pls AS sub
 IMPORT expensive.pls
@@ -29,19 +29,19 @@ rect(10) * rect(10).rotate(30)
 # acessing parametric shape from imported file
 - sub.externalShape(5)
 + sub.externalShape(3)
-    
+
 # grow and round functions
 + text('DEF', dy=5, ne=[0, -8]).grow(-.1)
 + text('GHI', dy=5, nw=[2, -8]).grow(.1)
 + text('JKL', dy=5, nw=[10, -8]).round(.2)
 
-# arrays   
+# arrays
 + rect(1).rotate(45).array(5,15,.5,0).translate(25,0)
 
 
 #-------------------------------------------------------------------
-# Shapes are parametric shortcuts. Unlike symbols, shapes will not 
-# be referenced but hardcopied for each instance. 
+# Shapes are parametric shortcuts. Unlike symbols, shapes will not
+# be referenced but hardcopied for each instance.
 #
 SHAPE cross(size, linewidth)
   rect(size, linewidth)
@@ -57,7 +57,7 @@ SHAPE invertedRotatedCross(size, linewidth, margin)
   - cross(size, linewidth).rotate(45, center=center(cross(size, linewidth)))
 
 #-------------------------------------------------------------------
-# symbols can be referenced with the 'ref' command. Translating, 
+# symbols can be referenced with the 'ref' command. Translating,
 # rotating and array creation is also supported.
 SYMBOL _main_
   ref(primitives).translate(20, 25).rotate(-12)
@@ -73,27 +73,27 @@ LAYER named_layer
 
 
 #-------------------------------------------------------------------
-# SHAPEs have a call method, that allows them to be placed for a 
+# SHAPEs have a call method, that allows them to be placed for a
 # range of parameters. If step is step set to zero, only the start
 # value of this parameter will be used.
 LAYER param_sweeps
   shiftedCross.call(start=(5,.5,36,-10), step=(0,0,6,6), stop=(0,0,55,5))
 
-  
+
 #-------------------------------------------------------------------
-# If expensive shapes are stored in external files, caching 
+# If expensive shapes are stored in external files, caching
 # dramatically reduces the rendering time
 LAYER second_named_layer
   expensive.hugeArray()
-  
+
 
 #-------------------------------------------------------------------
 # Parametric symbols are also possible, each set of parameters will
 # be rendered into a distinct symbol instance. The symbol name has
 # to contain {} placeholders (see python format language) to create
-# unique symbol names for all parameter sets used. 
+# unique symbol names for all parameter sets used.
 #
-SYMBOL parametric_symbol_x{:02.0f}_y{:02.0f} (x, y) 
+SYMBOL parametric_symbol_x{:02.0f}_y{:02.0f} (x, y)
 LAYER another_named_layer
   text('x = '+int(x)+', y = '+int(y), dy=2, s=[0,0])
   + rect(dx=x, dy=y, n=[0, -1])
@@ -105,7 +105,7 @@ LAYER 100 named_layer_with_fixed_number
   rect(dx=x, dy=y, n=[0, -1]).rotate(-10)
 
 
-# The name passed to the 'ref' function is the parametric 
+# The name passed to the 'ref' function is the parametric
 # name with all placeholders replaced by empty strings.
 #
 SYMBOL _main_

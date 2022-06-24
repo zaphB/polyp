@@ -11,8 +11,9 @@ from . import geometry
 _PRINT_LIT_REDUCTION = False
 
 class CallTree:
-  _operators = [['make'], ['.'], ['^'], ['*', '/'], ['-', '+'], ['pstart', 'pend'],
-                ['psep'], ['.'], ['='], [',']]
+  _operators = [['make'], ['.'], ['^'], ['*', '/'], ['-', '+'],
+                ['pstart', 'pend'], ['unpack'], ['psep'], ['.'],
+                ['='], [','],]
 
   def __init__(self, root, text=""):
     self._root = root
@@ -816,6 +817,24 @@ class CallTree:
 
             literals[i] = ['shaperef', _gdspy.CellReference(sym)]
 
+          #=====================================================================
+          # if star is found and no other use matched, replace with unpack
+          # operator
+          elif l[1] in ['*', ]:
+            literals[i] = ['operator', 'unpack']
+
+          #=====================================================================
+          # evaluate unpack operator
+          elif l[1] in ['unpack', ] and isNextLitType(['name', ]):
+            op = popNextLit()
+            if op[0] == 'list':
+              argList = op[1]
+            elif op[0] == 'obj':
+              argList = op[1]
+            else:
+              raise ValueError(f'unexpected type {op[0]}')
+            literals[i] = ['argumentlist', argList]
+
           else:
             if viewPrevLit():
               t1 = viewPrevLit()
@@ -857,6 +876,12 @@ class CallTree:
   def resolveNames(self, names):
     unresolvedNames = []
 
+    #-----------------------------------------------------
+    # prepare dict with all available names
+
+    # globals
+    names = _copy.deepcopy(self._root.globals)
+
     # magic names:
     names["__FILENAME__"] = ["string", _re.sub('\..*$', '', _os.path.basename(self._root.path))]
     names["__HASH__"] = ["string", self._root.hash]
@@ -866,6 +891,9 @@ class CallTree:
     # constants:
     names["True"] = ['int', 1]
     names["False"] = ['int', 0]
+
+    #-----------------------------------------------------
+    # do resolve names from dict
 
     for child in self._children:
       if type(child) is CallTree:
@@ -912,6 +940,7 @@ class CallTree:
         else:
           unresolvedNames.extend(resolveArglist(literal))
     return unresolvedNames
+
 
   def getShape(self, ref=False):
     utils.debug('getShape() called:')
