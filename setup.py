@@ -24,3 +24,4 @@ setup(name='polyp',
       },
       install_requires=['numpy', 'gdspy', 'matplotlib', 'qrcode']
 )
+

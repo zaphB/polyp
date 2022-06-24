@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# write clean version number to setup.py and update for commit
+./dev/update-setup.py --clean >/dev/null
+git add setup.py

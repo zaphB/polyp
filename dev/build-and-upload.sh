@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # change dir to this script's location
-cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
+cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 
 # check if repo is clean or need commit
 git update-index --refresh >/dev/null 2>&1
@@ -20,8 +20,21 @@ if ! pip install . ; then
   exit 1
 fi
 
-if ! python -m unittest test/*.py; then
+if ! ./dev/run-tests.sh; then
   echo "one or more unittests failed, canceling."
+  exit 1
+fi
+
+# extract version info from setup.py and check if successful
+ver="$(./dev/update-setup.py --clean)"
+if [[ "$ver" == "" ]]; then
+  echo "failed to extract current version from setup.py"
+  exit 1
+fi
+
+# check if tag with current version already exists
+if [[ "$(git tag | grep "v$ver")" != "" ]]; then
+  echo "tag with currrent setup.py version already exists"
   exit 1
 fi
 
@@ -31,9 +44,6 @@ if ! git diff-index --quiet HEAD --; then
   echo "uncommitted changes exist in repo, commit your changes before building a release"
   exit 1
 fi
-
-# extract version info from setup.py
-ver="$(cat setup.py | grep 'version=' | grep -oP '\d+\.\d+\.\d+')"
 
 pip install --upgrade pip build twine setuptools \
   && echo '=======================================' \
@@ -53,7 +63,4 @@ pip install --upgrade pip build twine setuptools \
   && echo '=== building project done' \
   && echo '=======================================' \
   && echo '' \
-  && python -m twine upload dist/* \
-  && minor="$(cat setup.py | grep "version=" | grep -o "\.[0-9][0-9]*[^.0-9]" | grep -o "[0-9][0-9]*")" \
-  && newMinor="$(echo "$minor + 1" | bc)" \
-  && sed -E -i "s/version='([0-9]+\.[0-9]+\.)[0-9]+'/version='\1$newMinor'/g" setup.py
+  && python -m twine upload dist/*

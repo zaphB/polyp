@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# write full version number to setup.py after commit
+./dev/update-setup.py >/dev/null
