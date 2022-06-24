@@ -3,7 +3,10 @@ GLOBALS
   b = 13,
   c = 'kek'
   d = 10
-  obj = {a = 5, b = 13, c = 'top', d = -20}
+  obj = {a = 5, b = 13,
+         c = 'top',
+         d = -20
+  }
 
 SHAPE s1()
   rect(a).rotate(b)

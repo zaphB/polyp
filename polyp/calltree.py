@@ -758,6 +758,14 @@ class CallTree:
             op2 = popNextLit()
             literals[i] = ['obj', {op1[1]: op2}]
 
+          elif l[1] == 'osep' and viewNextLit() == ['operator', 'oend']:
+            op = popNextLit()
+            literals[i] = op
+
+          elif l[1] == 'osep' and viewPrevLit() == ['operator', 'ostart']:
+            op = popPrevLit()
+            literals[i] = op
+
           elif (l[1] == 'osep'
                   and isPrevLitType(['obj'])
                   and isNextLitType(['obj'])):

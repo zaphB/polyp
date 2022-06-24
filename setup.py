@@ -14,7 +14,7 @@ setup(name='polyp',
       long_description=description,
       long_description_content_type='text/markdown',
       author='zaphB',
-      version='1.0.3',
+      version='1.1.0',
       packages=['polyp'],
       entry_points={
         'console_scripts': [
@@ -24,4 +24,3 @@ setup(name='polyp',
       },
       install_requires=['numpy', 'gdspy', 'matplotlib', 'qrcode']
 )
-

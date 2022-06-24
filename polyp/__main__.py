@@ -7,8 +7,14 @@ import time
 import traceback
 import re
 import polyp
+import sys
+
 
 def main():
+  if '--version' in sys.argv:
+    print(f'polyp version {polyp.__version__}')
+    return
+
   parser = argparse.ArgumentParser(description='Polyp layout renderer command line tool')
   parser.add_argument('layout', type=argparse.FileType('r'),
                       help='path to a polyp layout script (*.pls) to execute '
