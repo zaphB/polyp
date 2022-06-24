@@ -444,7 +444,6 @@ class CallTree:
                               listParams
                               +[['assignment', [k, self._py2lit(v)]]
                                     for k, v in dargs.items()]]]
-          print(self._literals)
         else:
           raise ValueError(f'ref requires one or more list args and zero or '
                            f'more named args, found {len(largs)} list args '
