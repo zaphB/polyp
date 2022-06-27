@@ -1,2 +1,2 @@
 SHAPE hugeArray()
-  text('k', dy=1).array(15,10,.5,.5)
+  text('k', dy=1).array(30,30,.5,.5)

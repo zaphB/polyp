@@ -4,6 +4,10 @@ import os
 import time
 
 class TestBuildExample(unittest.TestCase):
+  def assertExists(self, path):
+    if not os.path.exists(path):
+      raise AssertionError(f'file {path} does not exist')
+
   def _test_build(self, files, opts=[], clean=True):
     # clean cache files
     if clean:
@@ -16,18 +20,18 @@ class TestBuildExample(unittest.TestCase):
       # run build process
       res = subprocess.run(['polyp', *opts, f'{f}.pls'], cwd='test/pls')
       self.assertEqual(res.returncode, 0)
+      if '-p' not in opts:
+        self.assertExists(f'test/pls/{f}.gds')
 
   def test_gdsBuild(self):
     files = ('test', 'objects', 'qrcode')
     t0 = time.time()
-    self._test_build(files=files)
+    self._test_build(files=['caching'])
     dt = time.time()-t0
-    for f in files:
-      self.assertTrue(os.path.exists(f'test/pls/{f}.gds'))
 
     t0 = time.time()
-    self._test_build(files=files, clean=False)
-    self.assertTrue(time.time()-t0 < .9*dt)
+    self._test_build(files=['caching'], clean=False)
+    self.assertLess(time.time()-t0, .5*dt)
 
 
   def test_pdfBuild(self):

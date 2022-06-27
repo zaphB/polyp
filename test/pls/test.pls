@@ -83,8 +83,8 @@ LAYER param_sweeps
 #-------------------------------------------------------------------
 # If expensive shapes are stored in external files, caching
 # dramatically reduces the rendering time
-LAYER second_named_layer
-  expensive.hugeArray()
+#LAYER second_named_layer
+#  expensive.hugeArray()
 
 
 #-------------------------------------------------------------------
