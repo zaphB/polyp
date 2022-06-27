@@ -879,7 +879,8 @@ class CallTree:
               usedParams.append(arg)
 
             # resolve names in used arguments
-            _unresolvedNames = self.resolveNames({}, literals=usedParams)
+            _unresolvedNames = self.resolveNames({}, literals=usedParams,
+                                                 resolveGlobals=True)
             if _unresolvedNames:
               raise ValueError(f'found unresolved names "'
                                f'{", ".join(_unresolvedNames)}" '
@@ -887,12 +888,29 @@ class CallTree:
                                f'of parametric symbol {pattern}')
 
             # create symbol name
-            symInstanceName = pattern.format(*[p[1] for p in usedParams])
+            def removeLitTypes(params):
+              res = []
+              for p in params:
+                if p[0] == 'obj':
+                  res.append('_'.join([f'{k}{v[1]}' for k, v in p[1].items()]))
+                else:
+                  res.append(p[1])
+              return res
+
+            # format and clean symbol name
+            symInstanceName = (_re.sub(
+                                    r'[^a-zA-Z0-9\._]+', ' ',
+                                    pattern.format(
+                                        *removeLitTypes(usedParams)))
+                                  .strip().replace(' ', '_'))
+
+            # check if different than pattern to validate that placeholders
+            # existed in the original name
             if pattern == symInstanceName:
               raise ValueError(f'parametric symbol name {pattern} does not '
-                               'seem to contain {} placeholders, please '
-                               'insert placeholders to guarantee unique '
-                               'symbol names for each parameter choice')
+                                'seem to contain {} placeholders, please '
+                               f'insert placeholders to guarantee unique '
+                               f'symbol names for each parameter choice')
 
             if symInstanceName in self._root.gdsLib.cells.keys():
               sym = self._root.gdsLib.cells[symInstanceName]
@@ -901,6 +919,7 @@ class CallTree:
               sym = _gdspy.Cell(symInstanceName)
               self._root.gdsLib.add(sym)
 
+            # if the newly added symbol is still empty, create geometry
             if len(list(sym)) == 0:
               for section in paramSym:
                 tree = _copy.deepcopy(section['tree'])
@@ -956,10 +975,14 @@ class CallTree:
 
             literals[i] = ['shaperef', _gdspy.CellReference(sym)]
 
+
           #=====================================================================
-          # if star is found and no other use matched, replace with unpack
+          # if star is found and no left operand is found, replace with unpack
           # operator
-          elif l[1] in ['*', ]:
+          elif (l[1] == '*'
+                and (viewPrevLit() is None
+                  or isPrevLitType(['psep', 'osep'])
+                  or viewPrevLit() == ['operator', ','])):
             literals[i] = ['operator', 'unpack']
 
           #=====================================================================

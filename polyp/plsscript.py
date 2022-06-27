@@ -436,8 +436,12 @@ class _ScriptSection:
       self._callTree.evaluate()
     except KeyboardInterrupt:
       raise
-    except:
-      pass
+    except ValueError as e:
+      if (('operands' in str(e) and 'name' in str(e))
+          or str(e).lower().startswith('unresolved')):
+        pass
+      else:
+        raise
 
     # if not in shape or parametric symbol definition, evaluate
     # a second time, also resolve for globals and raise if error
