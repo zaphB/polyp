@@ -9,7 +9,7 @@ Polyp is definitely interesting for you if you
 
 Polyp is probably not for you if you
 * prefer manually drawing geometry
-* fell uncomfortable using the command line
+* feel uncomfortable using the command line
 
 A minimal example is shown in the following:
 

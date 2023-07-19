@@ -83,6 +83,12 @@ class Shape:
         self._shape.rotate(angle, self.center())
     return self
 
+  def scale(self, s1, s2, center=None):
+    x0, y0 = center or (0,0)
+    if not self._shape is None:
+      self._shape.scale(s1, s2, center)
+    return self
+
   def mirror(self, p1, p2, copy=False):
     self._shape.mirror(p1, p2)
     return self
@@ -343,6 +349,33 @@ class Qrcode(Shape):
     self.translate(self.anchor[0], self.anchor[1])
 
 
+class Translator:
+  def __init__(self, *largs, **dargs):
+    self._largs = largs
+    self._dargs = dargs
+
+  def __call__(self, op):
+    if hasattr(op, 'translate'):
+      if self._dargs.get('copy', False):
+        return op.copy().union(op.translate(*self._largs, **self._dargs))
+      else:
+        return op.translate(*self._largs, **self._dargs)
+    elif len(self._largs) == 2 and len(self._dargs) == 0:
+      self._dx = self._largs[0]
+      self._dy = self._largs[1]
+    elif (len(self._largs) == 0
+          and len(self._dargs) == 2
+          and 'dx' in self._dargs
+          and 'dy' in self._dargs):
+      self._dx = self._dargs['dx']
+      self._dy = self._dargs['dy']
+    else:
+      raise ValueError("Invalid translator instanciation.")
+    if 'copy' in self._dargs:
+      raise ValueError('"copy" may only be specified when translating shapes.')
+    return (op[0]+self._dx, op[1]+self._dy)
+
+
 class Rotator:
   def __init__(self, angle, center=None, unit="deg", copy=False):
     self._copy = copy
@@ -380,6 +413,29 @@ class Rotator:
               (op[0]-c[0])*_np.sin(self._angle) + (op[1]-c[1])*_np.cos(self._angle) + c[1])
 
 
+class Scaler:
+  def __init__(self, s1=None, s2=None, x=None, y=None, copy=False):
+    self._copy = copy
+    self._x0 = x or 0
+    self._y0 = y or 0
+    if s1 is not None and s2 is None:
+      self._s1 = s1
+      self._s2 = s1
+    elif s1 is not None and s2 is not None:
+      self._s1 = s1
+      self._s2 = s2
+    else:
+      raise ValueError("Incomplete parameters to scale: specify at least "           
+                       "one scale factor. Parameters 'x', 'y' and 'copy' "
+                       "are optional")
+
+  def __call__(self, op):
+    if self._copy:
+      return op.copy().union(op.scale(self._s1, self._s2, self._x0, self._y0))
+    else:
+      return op.scale(self._s1, self._s2, (self._x0, self._y0))
+
+
 class Mirrower:
   def __init__(self, p1=None, p2=None, x=None, y=None, copy=False):
     self._copy = copy
@@ -412,31 +468,6 @@ class Mirrower:
       else:
         return op.mirror(self._p1, self._p2)
 
-class Translator:
-  def __init__(self, *largs, **dargs):
-    self._largs = largs
-    self._dargs = dargs
-
-  def __call__(self, op):
-    if hasattr(op, 'translate'):
-      if self._dargs.get('copy', False):
-        return op.copy().union(op.translate(*self._largs, **self._dargs))
-      else:
-        return op.translate(*self._largs, **self._dargs)
-    elif len(self._largs) == 2 and len(self._dargs) == 0:
-      self._dx = self._largs[0]
-      self._dy = self._largs[1]
-    elif (len(self._largs) == 0
-          and len(self._dargs) == 2
-          and 'dx' in self._dargs
-          and 'dy' in self._dargs):
-      self._dx = self._dargs['dx']
-      self._dy = self._dargs['dy']
-    else:
-      raise ValueError("Invalid translator instanciation.")
-    if 'copy' in dargs:
-      raise ValueError('"copy" may only be specified when translating shapes.')
-    return (op[0]+self._dx, op[1]+self._dy)
 
 class Grower:
   def __init__(self, d):
@@ -444,7 +475,6 @@ class Grower:
 
   def __call__(self, op):
     return op.grow(self._d)
-
 
 class Rounder:
   def __init__(self, r):

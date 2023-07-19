@@ -256,6 +256,13 @@ class CallTree:
                                   +geometry.Translator(*largs, **dargs)]]
 
       #=====================================================================
+      # scale function
+      elif self._func == "scale":
+        requireResolvedNamesOnly()
+        self._literals = [['func', utils.TypeCheck(["shape",])
+                                  +geometry.Scaler(*largs, **dargs)]]
+
+      #=====================================================================
       # rotate function
       elif self._func == "rotate":
         requireResolvedNamesOnly()
@@ -306,7 +313,7 @@ class CallTree:
         self._literals = [['int', int(largs[0])]]
 
       #=====================================================================
-      # absolute
+      # absolute value
       elif self._func == "abs":
         requireResolvedNamesOnly()
         if len(dargs) > 0 or len(largs) != 1:
@@ -338,6 +345,14 @@ class CallTree:
         self._literals = [['float', fdict[self._func](largs)]]
 
       #=====================================================================
+      # square root
+      elif self._func == "sqrt":
+        requireResolvedNamesOnly()
+        if len(dargs) > 0 or len(largs) != 1:
+          raise ValueError("Invalid arguments to 'sqrt' call.")
+        self._literals = [['float', _np.sqrt(largs[0])]]
+
+      #=====================================================================
       # trigonometric functions
       elif self._func in ["cos", "sin", "tan", "asin", "acos", "atan"]:
         requireResolvedNamesOnly()
@@ -349,7 +364,8 @@ class CallTree:
         elif u == 'rad':
           pass
         else:
-          raise ValueError("Invalid value for 'unit' argument in 'cos' function.")
+          raise ValueError(f"Invalid value for 'unit' argument in "
+                           f"'{self._func}' function.")
         if self._func == "sin":
           self._literals = [['float', _np.sin(largs[0])]]
         elif self._func == "cos":
