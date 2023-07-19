@@ -1,7 +1,7 @@
 import re as _re
 import numpy as _np
 import copy as _copy
-import gdspy as _gdspy
+import gdstk
 import os as _os
 import time as _time
 
@@ -423,7 +423,7 @@ class CallTree:
       # instanciate shapes
       elif self._func in self._root.shapeDict:
         requireResolvedNamesOnly()
-        obj = _copy.deepcopy(self._root.shapeDict[self._func])
+        obj = self._root.shapeDict[self._func].copy()
         shape = self._instanciateShape(obj, largs, dargs)
         utils.debug('self._literals = ["shape", '+str(shape)+']')
         self._literals = [['shape', shape]]
@@ -438,9 +438,11 @@ class CallTree:
       # create symbol reference:
       elif self._func == 'ref':
         if len(largs) == 1 and len(dargs) == 0:
-          self._literals = [['shaperef',
-                               _gdspy.CellReference(
-                                    self._root.gdsLib.cells[largs[0]])]]
+          _cell = None
+          for c in self._root.gdsLib.cells:
+            if c.name == largs[0]:
+              _cell = c
+          self._literals = [['shaperef', gdstk.Reference(_cell)]]
         elif len(largs) > 0 or len(dargs) > 0:
           for candidateName, candidate in self._root.paramSymDict.items():
             _cmp = lambda s: _re.sub(r'[\-_\{\}]+', '', s.lower())
@@ -814,8 +816,7 @@ class CallTree:
             op2 = popNextLit()
 
             largs, dargs = op2[2]
-            obj = _copy.deepcopy(
-                          self._root.importDict[op1[1]].shapeDict[op2[1]])
+            obj = self._root.importDict[op1[1]].shapeDict[op2[1]].copy()
 
             shape = self._instanciateShape(obj, largs, dargs)
             utils.debug('self._literals['+str(i)+'] = ["shape", '
@@ -928,17 +929,20 @@ class CallTree:
                                f'insert placeholders to guarantee unique '
                                f'symbol names for each parameter choice')
 
-            if symInstanceName in self._root.gdsLib.cells.keys():
-              sym = self._root.gdsLib.cells[symInstanceName]
+            if symInstanceName in [c.name for c in self._root.gdsLib.cells]:
+              sym = [c for c in self._root.gdsLib.cells 
+                                  if c.name == symInstanceName][0]
             else:
-              _gdspy.current_library = self._root.gdsLib
-              sym = _gdspy.Cell(symInstanceName)
+              gdstk.current_library = self._root.gdsLib
+              sym = gdstk.Cell(symInstanceName)
               self._root.gdsLib.add(sym)
 
             # if the newly added symbol is still empty, create geometry
-            if len(list(sym)) == 0:
+            if len(sym.polygons) == 0:
               for section in paramSym:
-                tree = _copy.deepcopy(section['tree'])
+                # TODO: needs deepcopy
+                tree = section['tree']
+
                 # replace root reference with true reference:
                 tree._root = section['tree']._root
 
@@ -966,11 +970,9 @@ class CallTree:
 
                     shape = s._shape
                     if not shape is None:
-                      if hasattr(shape, "layer"):
-                        shape.layer = layer
-                      elif hasattr(shape, "layers"):
-                        shape.layers = [layer for _ in range(len(shape.layers))]
-                      sym.add(shape)
+                      for p in shape:
+                        p.layer = layer
+                        sym.add(p)
                   else:
                     for ref in refs:
                       sym.add(ref)
@@ -983,13 +985,13 @@ class CallTree:
               #       already...
               parent = self._root.parent
               while parent is not None:
-                _gdspy.current_library = parent.gdsLib
+                gdstk.current_library = parent.gdsLib
                 if sym.name not in parent.gdsLib:
                   parent.gdsLib.add(sym)
                 parent = parent.parent
-              _gdspy.current_library = self._root.gdsLib
+              gdstk.current_library = self._root.gdsLib
 
-            literals[i] = ['shaperef', _gdspy.CellReference(sym)]
+            literals[i] = ['shaperef', gdstk.Reference(sym)]
 
 
           #=====================================================================

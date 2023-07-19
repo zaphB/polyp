@@ -22,5 +22,5 @@ setup(name='polyp',
         ],
         'gui_scripts': []
       },
-      install_requires=['numpy', 'gdspy', 'matplotlib', 'qrcode']
+      install_requires=['numpy', 'gdstk', 'matplotlib', 'qrcode']
 )

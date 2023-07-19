@@ -1,5 +1,5 @@
 import re as _re
-import gdspy as _gdspy
+import gdstk
 import os as _os
 import time as _time
 import hashlib as _hashlib
@@ -87,8 +87,8 @@ class PlsScript:
       self.importDict = {}
       self.layerDict = {}
       self._dependencies = {}
-      self.gdsLib = _gdspy.GdsLibrary(unit=1e-6, precision=1e-10)
-      _gdspy.current_library = self.gdsLib
+      self.gdsLib = gdstk.Library(unit=1e-6, precision=1e-10)
+      gdstk.current_library = self.gdsLib
 
       # split into sections:
       pos = 0
@@ -122,21 +122,22 @@ class PlsScript:
 
       # add legend in case of named layers
       if any([name != None for name in self.layerDict.values()]):
-        _gdspy.current_library = self.gdsLib
+        gdstk.current_library = self.gdsLib
         if 'legend' in self.gdsLib.cells:
-          self.gdsLib.cells.pop('legend')
+          self.gdsLib.cells.pop([c.name for c in self.gdsLib.cells].index('legend'))
 
-        legendSym = _gdspy.Cell('legend')
+        legendSym = gdstk.Cell('legend')
         self.gdsLib.add(legendSym)
 
         legendShape = geometry.Shape()
         for text in [str(num)+': '+str(name) for num, name in sorted(self.layerDict.items())]:
           legendShape.translate(0, 10).union(geometry.Text(text, dy=8, w=[0, 0]))
-        legendShape._shape.layers = [255 for _ in range(len(legendShape._shape.layers))]
-        legendSym.add(legendShape._shape)
+        for p in legendShape._shape:
+          p.layer = 255
 
-      if self._cachedPath:
-        _pickle.dump(self.__dict__, open(self._cachedPath, 'wb'))
+      # TODO: fix caching
+      #if self._cachedPath:
+      #  _pickle.dump(self.__dict__, open(self._cachedPath, 'wb'))
 
 
   def lookupLayerNum(self, layerName, default=None):
@@ -156,26 +157,27 @@ class PlsScript:
 
 
   def _sortLibrary(self):
-    self.gdsLib.cells = _collections.OrderedDict([(k, v)
-                for k, v in sorted(self.gdsLib.cells.items())])
+    pass
+    #self.gdsLib.cells = _collections.OrderedDict([(k, v)
+    #            for k, v in sorted(self.gdsLib.cells.items())])
 
 
   def writeResults(self, path, pdfWidth=12, pdfTitle=None, pdfGrid=False):
-    _gdspy.current_library = self.gdsLib
+    gdstk.current_library = self.gdsLib
     self._sortLibrary()
     if path.endswith(".gds"):
-      _gdspy.current_library = self.gdsLib
+      gdstk.current_library = self.gdsLib
       self.gdsLib.write_gds(path)
 
     elif path.endswith(".pdf"):
       baseName = path[:-4]
-      for symName, symbol in self.gdsLib.cells.items():
-        if len(self.gdsLib.cells.keys()) > 1:
-          ext = "/"+symName
+      for symbol in self.gdsLib.cells:
+        if len(self.gdsLib.cells) > 1:
+          ext = "/"+symbol.name
         else:
           ext = ""
 
-        bb = symbol.get_bounding_box()
+        bb = symbol.bounding_box() or [(0,0),(1,1)]
         w = bb[1][0] - bb[0][0]
         h = bb[1][1] - bb[0][1]
         pdfFigsize = (pdfWidth+2, pdfWidth*h/w+2)
@@ -184,7 +186,7 @@ class PlsScript:
         if not pdfTitle is None:
           _plt.title(pdfTitle)
         _plt.grid(pdfGrid)
-        plotting.plot(self.gdsLib.cells, symName)
+        plotting.plot(self.gdsLib.cells, symbol.name)
         _plt.xlabel("X [$\mu$m]")
         _plt.ylabel("Y [$\mu$m]")
         _plt.legend()
@@ -198,15 +200,15 @@ class PlsScript:
 
 
   def importSymbols(self, lib, layerMap={}):
-    libDuplicate = _copy.deepcopy(lib)
+    libDuplicate = lib # _copy.deepcopy(lib)
     for layerFrom, layerTo in layerMap.items():
-      for cell, origCell in zip(libDuplicate.cells.values(), lib.cells.values()):
+      for cell, origCell in zip(libDuplicate.cells, lib.cells):
         if hasattr(cell, 'elements'):
           for elem, origElem in zip(cell.elements, origCell.elements):
             for i in range(len(elem.layers)):
               if origElem.layers[i] == layerFrom:
                 elem.layers[i] = layerTo
-    _gdspy.current_library = self.gdsLib
+    gdstk.current_library = self.gdsLib
     for symName in libDuplicate.cells:
       try:
         libDuplicate.extract(symName)
@@ -215,12 +217,12 @@ class PlsScript:
 
 
   def openViewer(self, currentLibMtl=None):
-    _gdspy.current_library = self.gdsLib
+    gdstk.current_library = self.gdsLib
     self._sortLibrary()
     if currentLibMtl is None:
-      currentLibMtl = [_gdspy.current_library, False]
+      currentLibMtl = [gdstk.current_library, False]
 
-    viewer = _gdspy.LayoutViewer.__new__(_gdspy.LayoutViewer)
+    viewer = gdstk.LayoutViewer.__new__(gdstk.LayoutViewer)
 
     def watchLib():
       nonlocal viewer
@@ -483,7 +485,7 @@ class _ScriptSection:
       if self._symbol in root.gdsLib.cells:
         sym = root.gdsLib.cells[self._symbol]
       else:
-        sym = _gdspy.Cell(self._symbol)
+        sym = gdstk.Cell(self._symbol)
         root.gdsLib.add(sym)
       for ref in self._callTree._result:
         sym.add(ref[1])
@@ -496,7 +498,7 @@ class _ScriptSection:
       if self._symbol in root.gdsLib.cells:
         sym = root.gdsLib.cells[self._symbol]
       else:
-        sym = _gdspy.Cell(self._symbol)
+        sym = gdstk.Cell(self._symbol)
         root.gdsLib.add(sym)
 
       s = self._callTree.getShape()
@@ -508,8 +510,9 @@ class _ScriptSection:
         if hasattr(shape, "layer"):
           shape.layer = self._layer
         elif hasattr(shape, "layers"):
-          shape.layers = [self._layer for _ in range(len(shape.layers))]
-        sym.add(shape)
+          for s in shape:
+            s.layer = self._layer
+        [sym.add(s) for s in shape]
 
 
   def __str__(self):

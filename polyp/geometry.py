@@ -1,4 +1,4 @@
-import gdspy as _gdspy
+import gdstk
 import numpy as _np
 import qrcode as _qr
 import qrcode.constants as _qrc
@@ -10,15 +10,15 @@ class Shape:
     self._shape = shape
 
   def union(self, operand):
-    self._shape = _gdspy.fast_boolean(self._shape, operand._shape, 'or')
+    self._shape = gdstk.boolean(self._shape or [], operand._shape or [], 'or')
     return self
 
   def substract(self, operand):
-    self._shape = _gdspy.fast_boolean(self._shape, operand._shape, 'not')
+    self._shape = gdstk.boolean(self._shape or [], operand._shape or [], 'not')
     return self
 
   def intersect(self, operand):
-    self._shape = _gdspy.fast_boolean(self._shape, operand._shape, 'and')
+    self._shape = gdstk.boolean(self._shape or [], operand._shape or [], 'and')
     return self
 
   def translate(self, dx=None, dy=None, **args):
@@ -55,38 +55,47 @@ class Shape:
 
         bb = self.boundingBox()._getPointList()
         if self._anchorType == 'ne':
-          self._shape.translate(-max(bb[0][0], bb[2][0]), -max(bb[0][1],bb[2][1]))
+          [p.translate(-max(bb[0][0], bb[2][0]), -max(bb[0][1],bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'se':
-          self._shape.translate(-max(bb[0][0], bb[2][0]), -min(bb[0][1],bb[2][1]))
+          [p.translate(-max(bb[0][0], bb[2][0]), -min(bb[0][1],bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'sw':
-          self._shape.translate(-min(bb[0][0], bb[2][0]), -min(bb[0][1],bb[2][1]))
+          [p.translate(-min(bb[0][0], bb[2][0]), -min(bb[0][1],bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'nw':
-          self._shape.translate(-min(bb[0][0], bb[2][0]), -max(bb[0][1],bb[2][1]))
+          [p.translate(-min(bb[0][0], bb[2][0]), -max(bb[0][1],bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'n':
-          self._shape.translate(-0.5*(bb[0][0]+bb[2][0]), -max(bb[0][1],bb[2][1]))
+          [p.translate(-0.5*(bb[0][0]+bb[2][0]), -max(bb[0][1],bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'e':
-          self._shape.translate(-max(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+          [p.translate(-max(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 's':
-          self._shape.translate(-0.5*(bb[0][0]+bb[2][0]), -min(bb[0][1],bb[2][1]))
+          [p.translate(-0.5*(bb[0][0]+bb[2][0]), -min(bb[0][1],bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'w':
-          self._shape.translate(-min(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+          [p.translate(-min(bb[0][0], bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+              for p in self._shape]
         elif self._anchorType == 'c':
-          self._shape.translate(-0.5*(bb[0][0]+bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
-      self._shape.translate(dx, dy)
+          [p.translate(-0.5*(bb[0][0]+bb[2][0]), -0.5*(bb[0][1]+bb[2][1]))
+              for p in self._shape]
+      [p.translate(dx, dy) for p in self._shape]
     return self
 
   def rotate(self, angle, center=None):
     if not self._shape is None:
       if center != None:
-        self._shape.rotate(angle, center)
+        [p.rotate(angle, center) for p in self._shape]
       else:
-        self._shape.rotate(angle, self.center())
+        [p.rotate(angle, self.center()) for p in self._shape]
     return self
 
   def scale(self, s1, s2, center=None):
     x0, y0 = center or (0,0)
     if not self._shape is None:
-      self._shape.scale(s1, s2, center)
+      [p.scale(s1, s2, center) for p in self._shape]
     return self
 
   def mirror(self, p1, p2, copy=False):
@@ -95,19 +104,17 @@ class Shape:
 
   def grow(self, size):
     if not self._shape is None:
-      self._shape = _gdspy.offset(self._shape, size)
+      gdstk.offset(self._shape, size)
     return self
 
   def roundCorners(self, radius):
     if not self._shape is None:
-      self._shape.fillet(radius)
+      [p.fillet(radius) for p in self._shape]
     return self
 
   def _getPointList(self):
-    if hasattr(self._shape, 'points'):
-      return self._shape.points
-    elif hasattr(self._shape, 'polygons'):
-      return [point for poly in self._shape.polygons for point in poly]
+    if type(self._shape) is list:
+      return [point for poly in self._shape for point in poly.points]
     else:
       return []
 
@@ -135,7 +142,7 @@ class Shape:
     return [sum([p[0] for p in P])/len(P), sum([p[1] for p in P])/len(P)]
 
   def copy(self):
-    return Shape(_gdspy.copy(self._shape, 0, 0))
+    return Shape(gdstk.copy(self._shape, 0, 0))
 
   def __str__(self):
     return "<polyp.geometry.Shape: {} >".format(self._shape)
@@ -203,7 +210,7 @@ class Rect(Shape):
         p1 = (anchor[0]-width/2, anchor[1]-height/2)
         p2 = (anchor[0]+width/2, anchor[1]+height/2)
 
-    self._shape = _gdspy.Rectangle(p1, p2)
+    self._shape = [gdstk.rectangle(p1, p2)]
 
 
 class Polygon(Shape):
@@ -211,7 +218,7 @@ class Polygon(Shape):
     if any([type(a) is not tuple or len(a) != 2 for a in args]):
       raise ValueError("Unexpected argument passed to polygon constructor, expected point list: "+str(args))
 
-    self._shape = _gdspy.Polygon(args)
+    self._shape = [gdstk.Polygon(args)]
 
 
 class Text(Shape):
@@ -237,9 +244,11 @@ class Text(Shape):
       raise ValueError("Must specify text height (dy) or text width (dx).")
 
     if 'dx' in args:
-      self._shape = _gdspy.PolygonSet(fonts.makeText(str(string), width=args['dx']))
+      self._shape = [gdstk.Polygon(p) 
+                        for p in fonts.makeText(str(string), width=args['dx'])]
     else:
-      self._shape = _gdspy.PolygonSet(fonts.makeText(str(string), height=dy))
+      self._shape = [gdstk.Polygon(p) 
+                        for p in fonts.makeText(str(string), height=dy)]
 
     bb = self.boundingBox()._getPointList()
     if 'dx' in args:
@@ -321,7 +330,7 @@ class Qrcode(Shape):
           polys.append([[dx*i*w, dy*j*h], [dx*(i+1)*w, dy*j*h],
                         [dx*(i+1)*w, dy*(j+1)*h], [dx*i*w, dy*(j+1)*h]])
 
-    self._shape = _gdspy.PolygonSet(polys)
+    self._shape = [gdstk.Polygon(p) for p in polys]
     bb = self.boundingBox()._getPointList()
     top = max(bb[0][1],bb[2][1])
     bot = min(bb[0][1],bb[2][1])
@@ -357,9 +366,15 @@ class Translator:
   def __call__(self, op):
     if hasattr(op, 'translate'):
       if self._dargs.get('copy', False):
-        return op.copy().union(op.translate(*self._largs, **self._dargs))
+        _orig = op.copy()
       else:
-        return op.translate(*self._largs, **self._dargs)
+        _orig = None
+      _op = op.translate(*self._largs, **self._dargs)
+      if _orig:
+        return _orig.union(_op)
+      else:
+        return _op
+
     elif len(self._largs) == 2 and len(self._dargs) == 0:
       self._dx = self._largs[0]
       self._dy = self._largs[1]
@@ -373,6 +388,9 @@ class Translator:
       raise ValueError("Invalid translator instanciation.")
     if 'copy' in self._dargs:
       raise ValueError('"copy" may only be specified when translating shapes.')
+    if hasattr(op, 'origin'):
+      op.origin = (op.origin[0]+self._dx, op.origin[1]+self._dy) 
+      return op
     return (op[0]+self._dx, op[1]+self._dy)
 
 
@@ -497,7 +515,7 @@ class Arrayer:
     ly = self._ly
     dx = self._dx
     dy = self._dy
-    if type(op) is _gdspy.CellReference:
+    if type(op) is gdstk.Reference:
       bb = op.ref_cell.get_bounding_box()
       if bb is not None:
         w = abs(bb[1][0] - bb[0][0])
@@ -505,7 +523,7 @@ class Arrayer:
       else:
         w = 0
         h = 0
-      return _gdspy.CellArray(op.ref_cell, int(lx), int(ly), (dx+w, dy+h), op.origin, op.rotation)
+      return gdstk.CellArray(op.ref_cell, int(lx), int(ly), (dx+w, dy+h), op.origin, op.rotation)
     else:
       result = Shape()
       w = op.width()

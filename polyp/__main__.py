@@ -1,5 +1,5 @@
 import argparse
-import gdspy
+import gdstk
 import threading
 import signal
 import os
@@ -42,7 +42,7 @@ def main():
       thr = False
       parseTime = 10
       lasthash = ''
-      currentLibMtl = [gdspy.current_library, False]
+      currentLibMtl = [gdstk.current_library, False]
       try:
         while True:
           lastchange = os.stat(args.layout.name).st_mtime
@@ -58,7 +58,7 @@ def main():
                                                         .format((renderTime - int(renderTime))*1e3))
 
             if lasthash != script.hash:
-              currentLibMtl[0] = gdspy.current_library
+              currentLibMtl[0] = gdstk.current_library
               time.sleep(2)
               lasthash = script.hash
 
@@ -110,10 +110,9 @@ def main():
       print("Warning: watching not supported for .gds files.")
 
     try:
-      gds = gdspy.GdsLibrary()
       path = args.layout.name
       args.layout.close()
-      gds.read_gds(path)
+      gds = gdstk.read_gds(path)
       script = polyp.plsscript.PlsScript()
       script.gdsLib = gds
       if not args.no_output and suffix != 'gds':

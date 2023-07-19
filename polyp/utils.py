@@ -135,7 +135,8 @@ class Caller:
     union = _geometry.Shape()
 
     for argset in self._arglist:
-      tree = _copy.deepcopy(obj['tree'])
+      # TODO: tree should be copied
+      tree = obj['tree']
       if len(argset) > len(args):
         raise ValueError("More sweep parameters than shape parameters.")
       tree.resolveNames({k: v for k, v in zip(args, argset)})
