@@ -72,13 +72,22 @@ class CallTree:
 
   def _py2lit(self, *vals):
     res = []
+    def isInt(x):
+      try: return _np.isclose(int(x), float(x))
+      except KeyboardInterrupt: raise
+      except: pass
+    def isFloat(x):
+      try: float(x); return True
+      except KeyboardInterrupt: raise
+      except: pass
+
     for val in vals:
       if type(val) is list and type(val[0]) is str:
         res.append(val)
-      elif type(val) is float:
-        res.append(['float', val])
-      elif type(val) is int:
-        res.append(['int', val])
+      elif isInt(val):
+        res.append(['int', int(val)])
+      elif isFloat(val):
+        res.append(['float', float(val)])
       elif type(val) is list and len(val) == 2:
         res.append(['point', val])
       elif type(val) is str:
@@ -348,7 +357,7 @@ class CallTree:
       # square root
       elif self._func == "sqrt":
         requireResolvedNamesOnly()
-        if len(dargs) > 0 or len(largs) != 1:
+        if len(dargs) > 0 or len(largs) != 1 or largs[0]<0:
           raise ValueError("Invalid arguments to 'sqrt' call.")
         self._literals = [['float', _np.sqrt(largs[0])]]
 

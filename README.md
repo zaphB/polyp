@@ -1,6 +1,6 @@
 # Human-Readble-Ascii to gdsII Converter
 
-Polyp is a renderer that creates gdsII layout files from an all-ascii human-readble layout language. Geometric shapes are constructed from primitive shapes, e.g., squares, circles or text, that are translated, rotated, scaled or otherwise transformed and can be added, subtracted or intersected with each other.
+Polyp is a renderer that creates gdsII layout files from an all-ascii human-readable layout language. Geometric shapes are constructed from primitive shapes, e.g., squares, circles or text, that are translated, rotated, scaled or otherwise transformed and can be added, subtracted or intersected with each other.
 
 Polyp is definitely interesting for you if you
 * are not afraid of using the command line
@@ -36,18 +36,18 @@ Install polyp and its dependencies with
 pip install polyp
 ```
 
-Executing `polyp -h` on the shell should now show the polyp quick help, `polyp --ersion` should show the expected version number.
+Executing `polyp -h` on the shell should now show the polyp quick help, `polyp --version` should show the expected version number.
 
 
 # Basic usage
 
 To compile a .pls polyp layout script to a .gds file, run `polyp filename`, where `filename` has to be replaced with the path of the .pls file.
 
-Passing the `-v` option (`polyp -v filename`) compiles the layout script and opens a simple viewer afterwards.
+Passing the `-v` (`--view`) option (`polyp -v filename`) compiles the layout script and opens a simple viewer afterwards.
 
-Passing the `-w` option keeps checkign the .pls file for updates, recompiles it in case a change in the file is detected and keeps the compiled result open in a viewer.
+Passing the `-w` (`--watch`) option keeps checking the .pls file for updates, re-compiles in case a change in the file is detected and keeps the compiled result open in a viewer.
 
-If the `-p` option is passed to polyp, the layout script is compiled to .pdf instead of .gds. One pdf file is created for each gdsII symbol.
+If the `-p` (`--pdf`) option is passed to polyp, the layout script is compiled to .pdf instead of .gds. One pdf file is created for each gdsII symbol.
 
 
 # Examples
@@ -139,7 +139,14 @@ Translate supports the optional boolean arguement `copy`, which if set to true, 
 
 To rotate a square by 30 degrees, use `rect(10).rotate(30)`. Optionally, the center of rotation can be specified as a second parameter: `rect(10).rotate(30, [0, 10])`. By default, the center of rotation is given by the center of mass of the rotated geometry.
 
-Rotate supports the optional boolean arguement `copy`, which if set to true, causes the unrotated shape to be kept in the result, e.g. `rect(10).rotate(120, copy=True)`.
+Rotate supports the optional boolean argument `copy`, which if set to true, causes the unrotated shape to be kept in the result, e.g. `rect(10).rotate(120, copy=True)`.
+
+
+### Scale
+
+To scale a shape, use `.scale(s1, s2, center)`, where `s1` is the scale factor in x-direction, `s2` is the scale factor in y-direction and `center` is the reference point of the scaling. If `center` is omitted, the center of mass of the shape is used. If `s2` is omitted, both directions will be scaled by `a1`.
+
+Scale supports the optional boolean argument `copy`, which if set to true, causes the unscaled shape to be kept in the result, e.g. `rect(10).scale(3, center=[0,0], copy=True)`.
 
 
 ### Mirror
@@ -192,11 +199,11 @@ SYMBOL main
 The functions `height(...)` and `width(...)` return the height and width of the shape that is passed as an argument. For example `height(rect(10))` returns 10. The function `bb(...)` returns the bounding box of a shape. The function `center(...)` returns a shapes center of mass.
 
 
-### Mathematical functions
+### Math
 
 The trigonometric functions and there inverse functions are available as `cos`, `sin`, `tan`, `asin`, `acos`, `atan`. Angles are given in units of degrees. The function `atan2` is a variant of `atan` that uses two arguments and is able to handle the full circle. See the numpy documentation of `atan2` for further details.
 
-The function `abs(...)` returns the absolute value of the passed number. The functions `min`, `max` and `mean` return the minimum, maximum or arithmetical mean of the passed list of numbers.
+The function `abs(...)` returns the absolute value of the passed number, `sqrt(...)` returns the square root. The functions `min`, `max` and `mean` return the minimum, maximum or arithmetical mean of the passed list of numbers.
 
 
 ### Type conversions
@@ -401,7 +408,7 @@ SYMBOL main
     wire(*optsB)
 ```
 
-The unary `*` operator applied to objects unpacks the obect into a parameter list. This way it is not necessary to write down all argument names anymore, which is helpful in layouts with many free parameters.
+The unary `*` operator applied to objects unpacks the object into a parameter list. This way it is not necessary to write down all argument names anymore, which is helpful in layouts with many free parameters.
 
 ## QR codes
 

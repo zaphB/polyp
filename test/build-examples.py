@@ -23,8 +23,7 @@ class TestBuildExample(unittest.TestCase):
       if '-p' not in opts:
         self.assertExists(f'test/pls/{f}.gds')
 
-  def test_gdsBuild(self):
-    files = ('test', 'objects', 'qrcode')
+  def test_cachingSpeedup(self):
     t0 = time.time()
     self._test_build(files=['caching'])
     dt = time.time()-t0
@@ -32,6 +31,10 @@ class TestBuildExample(unittest.TestCase):
     t0 = time.time()
     self._test_build(files=['caching'], clean=False)
     self.assertLess(time.time()-t0, .5*dt)
+
+
+  def test_gdsBuild(self):
+    self._test_build(files=['test', 'objects', 'qrcode', 'circles'])
 
 
   def test_pdfBuild(self):

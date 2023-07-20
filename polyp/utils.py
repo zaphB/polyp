@@ -115,8 +115,8 @@ class Caller:
           if currentArglist[0][1] > dargs['stop']:
             break
 
-    elif len(largs) > 0 or len(dargs) > 0:
-      raise ValueError("Invalid arguments in parametric function call.")
+    elif len(dargs) > 0:
+      raise ValueError("Invalid arguments in parametric function call, expect 'start', 'step' and 'stop'.")
 
   def _isNum(self, v):
     return type(v) is float or type(v) is int

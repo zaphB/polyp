@@ -77,16 +77,18 @@ class Shape:
 
   def rotate(self, angle, center=None):
     if not self._shape is None:
-      if center != None:
+      if center is not None:
         self._shape.rotate(angle, center)
       else:
         self._shape.rotate(angle, self.center())
     return self
 
   def scale(self, s1, s2, center=None):
-    x0, y0 = center or (0,0)
     if not self._shape is None:
-      self._shape.scale(s1, s2, center)
+      if center is not None:
+        self._shape.scale(s1, s2, center)
+      else:
+        self._shape.scale(s1, s2, self.center())
     return self
 
   def mirror(self, p1, p2, copy=False):
@@ -414,10 +416,9 @@ class Rotator:
 
 
 class Scaler:
-  def __init__(self, s1=None, s2=None, x=None, y=None, copy=False):
+  def __init__(self, s1=None, s2=None, center=None, copy=False):
     self._copy = copy
-    self._x0 = x or 0
-    self._y0 = y or 0
+    self._center = center
     if s1 is not None and s2 is None:
       self._s1 = s1
       self._s2 = s1
@@ -431,9 +432,9 @@ class Scaler:
 
   def __call__(self, op):
     if self._copy:
-      return op.copy().union(op.scale(self._s1, self._s2, self._x0, self._y0))
+      return op.copy().union(op.scale(self._s1, self._s2, self._center))
     else:
-      return op.scale(self._s1, self._s2, (self._x0, self._y0))
+      return op.scale(self._s1, self._s2, self._center)
 
 
 class Mirrower:
