@@ -144,7 +144,7 @@ Rotate supports the optional boolean argument `copy`, which if set to true, caus
 
 ### Scale
 
-To scale a shape, use `.scale(s1, s2, center)`, where `s1` is the scale factor in x-direction, `s2` is the scale factor in y-direction and `center` is the reference point of the scaling. If `center` is omitted, the center of mass of the shape is used. If `s2` is omitted, both directions will be scaled by `a1`.
+To scale a shape, use `.scale(s1, s2, center)`, where `s1` is the scale factor in x-direction, `s2` is the scale factor in y-direction and `center` is the reference point of the scaling. If `center` is omitted, the center of mass of the shape is used. If `s2` is omitted, both directions will be scaled by `s1`.
 
 Scale supports the optional boolean argument `copy`, which if set to true, causes the unscaled shape to be kept in the result, e.g. `rect(10).scale(3, center=[0,0], copy=True)`.
 

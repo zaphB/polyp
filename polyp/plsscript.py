@@ -31,9 +31,9 @@ class PlsScript:
     def getCachedPath(path):
       if not path:
         return ''
-      filename = '.'.join(self.path.split('/')[-1].split('.')[:-1])
-      basedir = '/'.join(self.path.split('/')[:-1])
-      return basedir+'/.'+filename+'.plb'
+      base, fname = _os.path.split()
+      fname = '.'.join(fname.split('.')[:-1])
+      return _os.path.join(base, '.'+fname+'.plb')
 
     def isPathCached(path, newerThan=0):
       if forceRerender:
