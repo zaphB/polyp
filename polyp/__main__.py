@@ -5,7 +5,6 @@ import signal
 import os
 import time
 import traceback
-import re
 import polyp
 import sys
 
@@ -63,7 +62,7 @@ def main():
               lasthash = script.hash
 
               if not args.no_output:
-                script.writeResults(re.sub('\.[^\.]*$', '', args.layout.name)+'.'+suffix)
+                script.writeResults('.'.join(args.layout.name.split('.')[:-1])+'.'+suffix)
 
               if not thr or not thr.is_alive():
                 thr = threading.Thread(target=script.openViewer, args=(currentLibMtl,))
@@ -101,7 +100,7 @@ def main():
     else:
       script = polyp.plsscript.PlsScript(args.layout, args.force_rerender)
       if not args.no_output:
-        script.writeResults(re.sub('\.[^\.]*$', '', args.layout.name)+"."+suffix)
+        script.writeResults('.'.join(args.layout.name.split('.')[:-1])+'.'+suffix)
       if args.view:
         script.openViewer()
 
@@ -117,7 +116,7 @@ def main():
       script = polyp.plsscript.PlsScript()
       script.gdsLib = gds
       if not args.no_output and suffix != 'gds':
-        script.writeResults(re.sub('\.[^\.]*$', '', args.layout.name)+"."+suffix)
+        script.writeResults('.'.join(args.layout.name.split('.')[:-1])+'.'+suffix)
       if args.view:
         script.openViewer()
     except:

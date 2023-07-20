@@ -31,7 +31,7 @@ class PlsScript:
     def getCachedPath(path):
       if not path:
         return ''
-      base, fname = _os.path.split()
+      base, fname = _os.path.split(path)
       fname = '.'.join(fname.split('.')[:-1])
       return _os.path.join(base, '.'+fname+'.plb')
 
