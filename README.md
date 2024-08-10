@@ -1,3 +1,8 @@
+# Polyp will not be continued
+
+This is just a note that no further development in this project is to be expected. Mainly because 1) the underlying [gdspy](https://github.com/heitzmann/gdspy) is no longer maintained since it became [gdstk](https://github.com/heitzmann/gdstk) and 2) because the [gdsfactory](https://github.com/gdsfactory/gdsfactory) project has implemented anything I ever dreamed to do with polyp on a way more solid footing than polyp. 
+
+
 # Human-Readble-Ascii to gdsII Converter
 
 Polyp is a renderer that creates gdsII layout files from an all-ascii human-readable layout language. Geometric shapes are constructed from primitive shapes, e.g., squares, circles or text, that are translated, rotated, scaled or otherwise transformed and can be added, subtracted or intersected with each other.

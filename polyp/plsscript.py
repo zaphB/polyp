@@ -8,6 +8,8 @@ import threading as _threading
 import matplotlib.pyplot as _plt
 import pickle as _pickle
 import copy as _copy
+import traceback
+import warnings
 
 from . import utils
 from . import calltree
@@ -170,29 +172,32 @@ class PlsScript:
     elif path.endswith(".pdf"):
       baseName = path[:-4]
       for symName, symbol in self.gdsLib.cells.items():
-        if len(self.gdsLib.cells.keys()) > 1:
-          ext = "/"+symName
-        else:
-          ext = ""
+        try:
+          if len(self.gdsLib.cells.keys()) > 1:
+            ext = "/"+symName
+          else:
+            ext = ""
 
-        bb = symbol.get_bounding_box()
-        w = bb[1][0] - bb[0][0]
-        h = bb[1][1] - bb[0][1]
-        pdfFigsize = (pdfWidth+2, pdfWidth*h/w+2)
+          bb = symbol.get_bounding_box()
+          w = bb[1][0] - bb[0][0]
+          h = bb[1][1] - bb[0][1]
+          pdfFigsize = (pdfWidth+2, pdfWidth*h/w+2)
 
-        _plt.figure(figsize=pdfFigsize)
-        if not pdfTitle is None:
-          _plt.title(pdfTitle)
-        _plt.grid(pdfGrid)
-        plotting.plot(self.gdsLib.cells, symName)
-        _plt.xlabel("X [$\mu$m]")
-        _plt.ylabel("Y [$\mu$m]")
-        _plt.legend()
-        dirs = _os.path.dirname(baseName+ext+".pdf")
-        if dirs != '':
-          _os.makedirs(dirs, exist_ok=True)
-        _plt.savefig(baseName+ext+".pdf")
-        _plt.close()
+          _plt.figure(figsize=pdfFigsize)
+          if not pdfTitle is None:
+            _plt.title(pdfTitle)
+          _plt.grid(pdfGrid)
+          plotting.plot(self.gdsLib.cells, symName)
+          _plt.xlabel("X [$\mu$m]")
+          _plt.ylabel("Y [$\mu$m]")
+          _plt.legend()
+          dirs = _os.path.dirname(baseName+ext+".pdf")
+          if dirs != '':
+            _os.makedirs(dirs, exist_ok=True)
+          _plt.savefig(baseName+ext+".pdf")
+          _plt.close()
+        except Exception:
+          warnings.warn(f'failed to render symbol {symName}:\n'+traceback.format_exc())
     else:
       raise ValueError("Unknown file extension: '*.{}'".format(path.split('.')[-1]))
 
